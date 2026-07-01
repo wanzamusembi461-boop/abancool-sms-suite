@@ -14,16 +14,557 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+          scopes: string[] | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          revoked_at?: string | null
+          scopes?: string[] | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          scopes?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      campaigns: {
+        Row: {
+          cost_sms: number
+          created_at: string
+          delivered_count: number
+          failed_count: number
+          id: string
+          message: string
+          metadata: Json | null
+          name: string
+          recipient_count: number
+          scheduled_at: string | null
+          sender_id: string | null
+          sent_count: number
+          status: Database["public"]["Enums"]["campaign_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cost_sms?: number
+          created_at?: string
+          delivered_count?: number
+          failed_count?: number
+          id?: string
+          message: string
+          metadata?: Json | null
+          name: string
+          recipient_count?: number
+          scheduled_at?: string | null
+          sender_id?: string | null
+          sent_count?: number
+          status?: Database["public"]["Enums"]["campaign_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cost_sms?: number
+          created_at?: string
+          delivered_count?: number
+          failed_count?: number
+          id?: string
+          message?: string
+          metadata?: Json | null
+          name?: string
+          recipient_count?: number
+          scheduled_at?: string | null
+          sender_id?: string | null
+          sent_count?: number
+          status?: Database["public"]["Enums"]["campaign_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      contact_group_members: {
+        Row: {
+          added_at: string
+          contact_id: string
+          group_id: string
+        }
+        Insert: {
+          added_at?: string
+          contact_id: string
+          group_id: string
+        }
+        Update: {
+          added_at?: string
+          contact_id?: string
+          group_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_group_members_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "contact_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_groups: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      contacts: {
+        Row: {
+          company: string | null
+          created_at: string
+          email: string | null
+          id: string
+          metadata: Json | null
+          name: string | null
+          phone: string
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          metadata?: Json | null
+          name?: string | null
+          phone: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          metadata?: Json | null
+          name?: string | null
+          phone?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          kind: string
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      packages: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          price_per_sms: number
+          slug: string
+          sms_count: number
+          sort_order: number
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          price_per_sms: number
+          slug: string
+          sms_count: number
+          sort_order?: number
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_per_sms?: number
+          slug?: string
+          sms_count?: number
+          sort_order?: number
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          business_name: string | null
+          country: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          business_name?: string | null
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          business_name?: string | null
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sender_ids: {
+        Row: {
+          admin_notes: string | null
+          business_name: string
+          category: string | null
+          created_at: string
+          description: string | null
+          document_urls: string[] | null
+          id: string
+          purpose: string
+          sender_id: string
+          status: Database["public"]["Enums"]["sender_id_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          business_name: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          document_urls?: string[] | null
+          id?: string
+          purpose: string
+          sender_id: string
+          status?: Database["public"]["Enums"]["sender_id_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          business_name?: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          document_urls?: string[] | null
+          id?: string
+          purpose?: string
+          sender_id?: string
+          status?: Database["public"]["Enums"]["sender_id_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sms_balances: {
+        Row: {
+          free_sms: number
+          free_sms_granted: boolean
+          paid_sms: number
+          total_delivered: number
+          total_failed: number
+          total_sent: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          free_sms?: number
+          free_sms_granted?: boolean
+          paid_sms?: number
+          total_delivered?: number
+          total_failed?: number
+          total_sent?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          free_sms?: number
+          free_sms_granted?: boolean
+          paid_sms?: number
+          total_delivered?: number
+          total_failed?: number
+          total_sent?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sms_logs: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          delivered_at: string | null
+          error: string | null
+          id: string
+          message: string
+          phone: string
+          provider_message_id: string | null
+          provider_response: Json | null
+          sender_id: string | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["sms_status"]
+          user_id: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error?: string | null
+          id?: string
+          message: string
+          phone: string
+          provider_message_id?: string | null
+          provider_response?: Json | null
+          sender_id?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["sms_status"]
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error?: string | null
+          id?: string
+          message?: string
+          phone?: string
+          provider_message_id?: string | null
+          provider_response?: Json | null
+          sender_id?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["sms_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_logs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          amount_kes: number
+          created_at: string
+          id: string
+          mpesa_checkout_id: string | null
+          mpesa_receipt: string | null
+          package_id: string | null
+          phone: string
+          raw_callback: Json | null
+          sms_credited: number
+          status: Database["public"]["Enums"]["transaction_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_kes: number
+          created_at?: string
+          id?: string
+          mpesa_checkout_id?: string | null
+          mpesa_receipt?: string | null
+          package_id?: string | null
+          phone: string
+          raw_callback?: Json | null
+          sms_credited?: number
+          status?: Database["public"]["Enums"]["transaction_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_kes?: number
+          created_at?: string
+          id?: string
+          mpesa_checkout_id?: string | null
+          mpesa_receipt?: string | null
+          package_id?: string | null
+          phone?: string
+          raw_callback?: Json | null
+          sms_credited?: number
+          status?: Database["public"]["Enums"]["transaction_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wallets: {
+        Row: {
+          balance_kes: number
+          created_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance_kes?: number
+          created_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance_kes?: number
+          created_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "customer" | "reseller" | "developer" | "admin"
+      campaign_status:
+        | "draft"
+        | "scheduled"
+        | "processing"
+        | "sent"
+        | "failed"
+        | "cancelled"
+      sender_id_status: "pending" | "approved" | "rejected" | "active"
+      sms_status: "queued" | "sent" | "delivered" | "failed" | "undelivered"
+      transaction_status: "pending" | "completed" | "failed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +691,19 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["customer", "reseller", "developer", "admin"],
+      campaign_status: [
+        "draft",
+        "scheduled",
+        "processing",
+        "sent",
+        "failed",
+        "cancelled",
+      ],
+      sender_id_status: ["pending", "approved", "rejected", "active"],
+      sms_status: ["queued", "sent", "delivered", "failed", "undelivered"],
+      transaction_status: ["pending", "completed", "failed", "cancelled"],
+    },
   },
 } as const
