@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Sparkles, Send, Users, BarChart3, Shield, Zap, Globe, Check, Wallet, MessageSquare, Code2 } from "lucide-react";
+import { ArrowRight, Sparkles, Send, Users, BarChart3, Shield, Zap, Globe, Check, Wallet, MessageSquare, Code2, Tag } from "lucide-react";
 import { PublicNav } from "@/components/PublicNav";
 import { BackgroundOrbs } from "@/components/BackgroundOrbs";
 
