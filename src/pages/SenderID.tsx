@@ -41,16 +41,13 @@ interface SenderID {
 interface MarketplaceSenderID {
   id: string;
   name: string;
-  price: number;
-  rating: number;
-  sales: number;
+  code: string;
+  description: string | null;
+  price_kes: number;
+  rating: number | null;
+  sales_count: number;
 }
 
-const MARKETPLACE_SENDERIDS: MarketplaceSenderID[] = [
-  { id: "safaricom", name: "Safaricom Official", price: 7500, rating: 4.9, sales: 150 },
-  { id: "airtel", name: "Airtel Kenya", price: 7500, rating: 4.8, sales: 120 },
-  { id: "telkom", name: "Telkom Kenya", price: 7500, rating: 4.7, sales: 95 },
-];
 
 export default function SenderID() {
   const { user } = useAuth();
