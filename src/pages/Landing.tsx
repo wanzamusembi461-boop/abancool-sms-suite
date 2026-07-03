@@ -183,9 +183,10 @@ export default function Landing() {
 
         <div className="grid gap-6 md:grid-cols-3">
           {[
-            { n: "Starter", s: "10,000", p: "0.50", h: "For small teams", g: false },
-            { n: "Business", s: "20,000", p: "0.45", h: "Most popular", g: true },
-            { n: "Enterprise", s: "30,000+", p: "0.35", h: "High volume", g: false },
+            { n: "Starter", s: "1,000", p: "0.50", h: "For testing", g: false },
+            { n: "Popular", s: "5,000", p: "0.40", h: "Most popular", g: true },
+            { n: "Business", s: "10,000", p: "0.35", h: "For regular use", g: false },
+            { n: "Enterprise", s: "50,000+", p: "0.30", h: "High volume", g: false },
           ].map((p) => (
             <div key={p.n} className={`relative glass-card-lg p-7 hover-lift ${p.g ? "ring-2 ring-primary/40" : ""}`}>
               {p.g && (

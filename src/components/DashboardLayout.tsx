@@ -12,6 +12,7 @@ const nav = [
   { to: "/campaigns", label: "Campaigns", icon: Send },
   { to: "/contacts", label: "Contacts", icon: Users },
   { to: "/buy-sms", label: "Buy SMS", icon: Wallet },
+  { to: "/transactions", label: "Transactions", icon: Store },
   { to: "/sender-id", label: "Sender IDs", icon: Tag },
   { to: "/developer", label: "Developer", icon: Code2 },
   { to: "/settings", label: "Settings", icon: Settings },
