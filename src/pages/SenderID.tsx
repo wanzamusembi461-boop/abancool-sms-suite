@@ -165,7 +165,7 @@ export default function SenderID() {
       // Create sender ID record with status pending (awaiting admin approval after payment confirmed)
       await supabase.from("sender_ids").insert({
         user_id: user!.id,
-        sender_id: marketplace.name.split(" ")[0].toUpperCase(),
+        sender_id: marketplace.code,
         business_name: marketplace.name,
         category: "marketplace",
         purpose: `Marketplace purchase: ${marketplace.name}`,
