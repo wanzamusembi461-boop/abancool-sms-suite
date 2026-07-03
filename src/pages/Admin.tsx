@@ -228,7 +228,7 @@ export default function Admin() {
   });
 
   const approveSenderId = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+    mutationFn: async ({ id, status }: { id: string; status: "approved" | "rejected" | "active" | "pending" }) => {
       const { error } = await supabase.from("sender_ids").update({ status }).eq("id", id);
       if (error) throw error;
     },
