@@ -98,6 +98,21 @@ export default function SenderID() {
     },
   });
 
+  // Marketplace items from DB
+  const { data: marketplaceItems = [] } = useQuery<MarketplaceSenderID[]>({
+    queryKey: ["marketplace-public"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sender_id_marketplace")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order");
+      if (error) throw error;
+      return (data ?? []) as any;
+    },
+  });
+
+
   // Request sender ID
   const requestMutation = useMutation({
     mutationFn: async () => {
