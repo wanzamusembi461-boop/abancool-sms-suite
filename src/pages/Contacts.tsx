@@ -159,7 +159,7 @@ export default function Contacts() {
                     : "hover:bg-white/50"
                 }`}
               >
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: g.color }} />
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: g.color ?? "#8b5cf6" }} />
                 {g.name}
               </button>
             ))}

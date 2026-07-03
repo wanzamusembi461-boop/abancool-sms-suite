@@ -244,7 +244,7 @@ export default function BuySMS() {
           package_name={selectedPackage.name}
           total_price={selectedPackage.total_price}
           sms_count={selectedPackage.sms_count}
-          prefillPhone={profile?.phone}
+          prefillPhone={profile?.phone ?? undefined}
           onSuccess={handleDialogSuccess}
         />
       )}

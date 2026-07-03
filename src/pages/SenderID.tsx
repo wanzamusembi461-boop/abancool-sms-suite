@@ -41,16 +41,13 @@ interface SenderID {
 interface MarketplaceSenderID {
   id: string;
   name: string;
-  price: number;
-  rating: number;
-  sales: number;
+  code: string;
+  description: string | null;
+  price_kes: number;
+  rating: number | null;
+  sales_count: number;
 }
 
-const MARKETPLACE_SENDERIDS: MarketplaceSenderID[] = [
-  { id: "safaricom", name: "Safaricom Official", price: 7500, rating: 4.9, sales: 150 },
-  { id: "airtel", name: "Airtel Kenya", price: 7500, rating: 4.8, sales: 120 },
-  { id: "telkom", name: "Telkom Kenya", price: 7500, rating: 4.7, sales: 95 },
-];
 
 export default function SenderID() {
   const { user } = useAuth();
@@ -101,6 +98,21 @@ export default function SenderID() {
     },
   });
 
+  // Marketplace items from DB
+  const { data: marketplaceItems = [] } = useQuery<MarketplaceSenderID[]>({
+    queryKey: ["marketplace-public"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sender_id_marketplace")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order");
+      if (error) throw error;
+      return (data ?? []) as any;
+    },
+  });
+
+
   // Request sender ID
   const requestMutation = useMutation({
     mutationFn: async () => {
@@ -146,14 +158,14 @@ export default function SenderID() {
   const handlePaymentSuccess = async () => {
     if (!selectedMarketplaceId) return;
     
-    const marketplace = MARKETPLACE_SENDERIDS.find((s) => s.id === selectedMarketplaceId);
+    const marketplace = marketplaceItems.find((s) => s.id === selectedMarketplaceId);
     if (!marketplace) return;
 
     try {
       // Create sender ID record with status pending (awaiting admin approval after payment confirmed)
       await supabase.from("sender_ids").insert({
         user_id: user!.id,
-        sender_id: marketplace.name.split(" ")[0].toUpperCase(),
+        sender_id: marketplace.code,
         business_name: marketplace.name,
         category: "marketplace",
         purpose: `Marketplace purchase: ${marketplace.name}`,
@@ -394,15 +406,15 @@ export default function SenderID() {
       {/* Marketplace */}
       <TabsContent value="marketplace" className="space-y-6">
         <div className="grid gap-4 md:grid-cols-3">
-          {MARKETPLACE_SENDERIDS.map((sender) => (
+          {marketplaceItems.map((sender) => (
             <Card key={sender.id} className="glass-card p-6 hover-lift flex flex-col">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h3 className="font-semibold">{sender.name}</h3>
                   <div className="flex items-center gap-1 mt-1">
                     <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-xs font-medium">{sender.rating}</span>
-                    <span className="text-xs text-muted-foreground">({sender.sales} sales)</span>
+                    <span className="text-xs font-medium">{(sender.rating ?? 5)}</span>
+                    <span className="text-xs text-muted-foreground">({sender.sales_count} sales)</span>
                   </div>
                 </div>
               </div>
@@ -430,7 +442,7 @@ export default function SenderID() {
                 <div className="mb-4">
                   <span className="text-sm text-muted-foreground">One-time fee:</span>
                   <div className="font-display text-2xl font-bold">
-                    KES {sender.price.toLocaleString()}
+                    KES {sender.price_kes.toLocaleString()}
                   </div>
                 </div>
 
@@ -469,14 +481,14 @@ export default function SenderID() {
               <div>
                 <p className="text-sm text-muted-foreground mb-2">Sender ID</p>
                 <p className="font-semibold">
-                  {MARKETPLACE_SENDERIDS.find((s) => s.id === selectedMarketplaceId)?.name}
+                  {marketplaceItems.find((s) => s.id === selectedMarketplaceId)?.name}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground mb-2">Amount</p>
                 <p className="font-display text-2xl font-bold">
                   KES{" "}
-                  {MARKETPLACE_SENDERIDS.find((s) => s.id === selectedMarketplaceId)?.price.toLocaleString()}
+                  {marketplaceItems.find((s) => s.id === selectedMarketplaceId)?.price_kes.toLocaleString()}
                 </p>
               </div>
               <div>
@@ -504,7 +516,7 @@ export default function SenderID() {
                     }
                     setIsInitiatingPayment(true);
                     try {
-                      const marketplace = MARKETPLACE_SENDERIDS.find(
+                      const marketplace = marketplaceItems.find(
                         (s) => s.id === selectedMarketplaceId
                       );
                       if (!marketplace) throw new Error("Marketplace ID not found");
@@ -527,7 +539,7 @@ export default function SenderID() {
                           },
                           body: JSON.stringify({
                             phone: phone,
-                            amount: marketplace.price,
+                            amount: marketplace.price_kes,
                             type: "sender_id",
                             sender_id_market_id: selectedMarketplaceId,
                           }),
