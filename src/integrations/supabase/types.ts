@@ -235,11 +235,13 @@ export type Database = {
       }
       packages: {
         Row: {
+          allow_custom_amount: boolean | null
           created_at: string
           description: string | null
           id: string
           is_active: boolean
           name: string
+          notes: string | null
           price_per_sms: number
           slug: string
           sms_count: number
@@ -248,11 +250,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allow_custom_amount?: boolean | null
           created_at?: string
           description?: string | null
           id?: string
           is_active?: boolean
           name: string
+          notes?: string | null
           price_per_sms: number
           slug: string
           sms_count: number
@@ -261,11 +265,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allow_custom_amount?: boolean | null
           created_at?: string
           description?: string | null
           id?: string
           is_active?: boolean
           name?: string
+          notes?: string | null
           price_per_sms?: number
           slug?: string
           sms_count?: number
