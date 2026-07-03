@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Users, DollarSign, Settings, FileText, AlertCircle, Activity, MessageSquare, Plus, Search, Edit, Trash2, CreditCard } from "lucide-react";
+import {
+  Users, DollarSign, Settings as SettingsIcon, FileText, AlertCircle, Activity,
+  MessageSquare, Plus, CreditCard, Store, Trash2, Edit,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,147 +11,238 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
+interface PackageForm {
+  id?: string;
+  name: string;
+  slug: string;
+  sms_count: number;
+  total_price: number;
+  price_per_sms: number;
+  description: string;
+  notes: string;
+  sort_order: number;
+  is_active: boolean;
+}
+
+interface MarketForm {
+  id?: string;
+  name: string;
+  code: string;
+  description: string;
+  price_kes: number;
+  sort_order: number;
+  is_active: boolean;
+}
+
+const emptyPkg: PackageForm = {
+  name: "", slug: "", sms_count: 0, total_price: 0, price_per_sms: 0.5,
+  description: "", notes: "", sort_order: 0, is_active: true,
+};
+
+const emptyMarket: MarketForm = {
+  name: "", code: "", description: "", price_kes: 5000, sort_order: 0, is_active: true,
+};
+
 export default function Admin() {
-  const queryClient = useQueryClient();
-  const [selectedEnv, setSelectedEnv] = useState("sandbox");
+  const qc = useQueryClient();
   const [searchUser, setSearchUser] = useState("");
   const [creditDialogOpen, setCreditDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [creditAmount, setCreditAmount] = useState("");
   const [creditReason, setCreditReason] = useState("");
-  const [supportDialogOpen, setSupportDialogOpen] = useState(false);
-  const [supportForm, setSupportForm] = useState({ subject: "", message: "", priority: "normal" });
-  const [packagesDialogOpen, setPackagesDialogOpen] = useState(false);
-  const [packageForm, setPackageForm] = useState({ name: "", sms_count: 0, total_price: 0 });
+  const [pkgDialogOpen, setPkgDialogOpen] = useState(false);
+  const [pkgForm, setPkgForm] = useState<PackageForm>(emptyPkg);
+  const [marketDialogOpen, setMarketDialogOpen] = useState(false);
+  const [marketForm, setMarketForm] = useState<MarketForm>(emptyMarket);
+  const [smsSearch, setSmsSearch] = useState("");
 
-  // Fetch users from profiles table (not auth)
   const { data: users = [] } = useQuery({
     queryKey: ["admin-users", searchUser],
     queryFn: async () => {
-      let query = supabase
-        .from("profiles")
-        .select("*, user_roles(role)")
-        .order("created_at", { ascending: false });
-
-      if (searchUser) {
-        query = query.or(`email.ilike.%${searchUser}%,full_name.ilike.%${searchUser}%`);
-      }
-
-      const { data, error } = await query;
+      let q = supabase.from("profiles").select("*, user_roles(role)").order("created_at", { ascending: false });
+      if (searchUser) q = q.or(`email.ilike.%${searchUser}%,full_name.ilike.%${searchUser}%`);
+      const { data, error } = await q;
       if (error) throw error;
-      return data || [];
+      return data ?? [];
     },
   });
 
-  // Fetch transactions
   const { data: transactions = [] } = useQuery({
     queryKey: ["admin-transactions"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("transactions")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(50);
+        .from("transactions").select("*").order("created_at", { ascending: false }).limit(100);
       if (error) throw error;
-      return data || [];
+      return data ?? [];
     },
   });
 
-  // Fetch packages
   const { data: packages = [] } = useQuery({
     queryKey: ["admin-packages"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("packages").select("*");
+      const { data, error } = await supabase.from("packages").select("*").order("sort_order");
       if (error) throw error;
-      return data || [];
+      return data ?? [];
     },
   });
 
-  // Fetch support tickets
-  const { data: tickets = [] } = useQuery({
-    queryKey: ["admin-tickets"],
+  const { data: marketplace = [] } = useQuery({
+    queryKey: ["admin-marketplace"],
     queryFn: async () => {
-      // Mock data - would be from a tickets table
-      return [
-        { id: "1", user: "john@example.com", subject: "Payment issue", priority: "high", created_at: new Date() },
-        { id: "2", user: "jane@example.com", subject: "API question", priority: "normal", created_at: new Date() },
-      ];
+      const { data, error } = await supabase.from("sender_id_marketplace").select("*").order("sort_order");
+      if (error) throw error;
+      return data ?? [];
     },
   });
 
-  // Add credit mutation
-  const addCreditMutation = useMutation({
+  const { data: smsLogs = [] } = useQuery({
+    queryKey: ["admin-sms-logs", smsSearch],
+    queryFn: async () => {
+      let q = supabase.from("sms_logs").select("*").order("created_at", { ascending: false }).limit(200);
+      if (smsSearch) q = q.ilike("phone", `%${smsSearch}%`);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: senderIdReqs = [] } = useQuery({
+    queryKey: ["admin-sender-reqs"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("sender_ids").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const addCredit = useMutation({
     mutationFn: async () => {
       if (!selectedUserId || !creditAmount) throw new Error("User and amount required");
-      
-      // Log to audit
+      const amt = parseInt(creditAmount);
+      const { error } = await supabase.rpc("credit_sms", { _user_id: selectedUserId, _amount: amt });
+      if (error) throw error;
       await supabase.from("notifications").insert({
         user_id: selectedUserId,
         title: "Admin Credit",
-        body: `${creditAmount} SMS credited by admin. Reason: ${creditReason}`,
+        body: `${amt} SMS credited by admin.${creditReason ? ` Reason: ${creditReason}` : ""}`,
         kind: "info",
       });
-
-      // Credit SMS
-      await supabase.rpc("credit_sms", {
-        _user_id: selectedUserId,
-        _amount: parseInt(creditAmount),
-      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      setCreditAmount("");
-      setCreditReason("");
-      setSelectedUserId(null);
-      setCreditDialogOpen(false);
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      setCreditAmount(""); setCreditReason(""); setSelectedUserId(null); setCreditDialogOpen(false);
       toast.success("SMS credited");
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (e: Error) => toast.error(e.message),
   });
 
-  // Update package
-  const updatePackageMutation = useMutation({
-    mutationFn: async (pkg: any) => {
-      const { error } = await supabase
-        .from("packages")
-        .update({ is_active: !pkg.is_active })
-        .eq("id", pkg.id);
-      if (error) throw error;
+  const savePkg = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        name: pkgForm.name,
+        slug: pkgForm.slug || pkgForm.name.toLowerCase().replace(/\s+/g, "-"),
+        sms_count: pkgForm.sms_count,
+        total_price: pkgForm.total_price,
+        price_per_sms: pkgForm.price_per_sms,
+        description: pkgForm.description || null,
+        notes: pkgForm.notes || null,
+        sort_order: pkgForm.sort_order,
+        is_active: pkgForm.is_active,
+      };
+      if (pkgForm.id) {
+        const { error } = await supabase.from("packages").update(payload).eq("id", pkgForm.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("packages").insert(payload);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-packages"] });
-      toast.success("Package updated");
+      qc.invalidateQueries({ queryKey: ["admin-packages"] });
+      qc.invalidateQueries({ queryKey: ["packages"] });
+      setPkgDialogOpen(false); setPkgForm(emptyPkg);
+      toast.success("Package saved");
     },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const togglePkg = useMutation({
+    mutationFn: async (pkg: any) => {
+      const { error } = await supabase.from("packages").update({ is_active: !pkg.is_active }).eq("id", pkg.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-packages"] }); toast.success("Updated"); },
+  });
+
+  const deletePkg = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("packages").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-packages"] }); toast.success("Deleted"); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const saveMarket = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        name: marketForm.name,
+        code: marketForm.code.toUpperCase(),
+        description: marketForm.description || null,
+        price_kes: marketForm.price_kes,
+        sort_order: marketForm.sort_order,
+        is_active: marketForm.is_active,
+      };
+      if (marketForm.id) {
+        const { error } = await supabase.from("sender_id_marketplace").update(payload).eq("id", marketForm.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("sender_id_marketplace").insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-marketplace"] });
+      qc.invalidateQueries({ queryKey: ["marketplace-public"] });
+      setMarketDialogOpen(false); setMarketForm(emptyMarket);
+      toast.success("Saved");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteMarket = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("sender_id_marketplace").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-marketplace"] }); toast.success("Deleted"); },
+  });
+
+  const approveSenderId = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase.from("sender_ids").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-sender-reqs"] }); toast.success("Updated"); },
   });
 
   const stats = {
     totalUsers: users.length,
     totalTransactions: transactions.length,
-    totalRevenue: transactions.reduce((sum, t) => sum + Number(t.amount_kes), 0),
+    totalRevenue: transactions.filter((t) => t.status === "completed").reduce((s, t) => s + Number(t.amount_kes), 0),
     todayRevenue: transactions
-      .filter((t) => {
-        const today = new Date().toDateString();
-        return new Date(t.created_at).toDateString() === today;
-      })
-      .reduce((sum, t) => sum + Number(t.amount_kes), 0),
-    pendingTickets: tickets.filter((t) => t.priority === "high").length,
+      .filter((t) => t.status === "completed" && new Date(t.created_at).toDateString() === new Date().toDateString())
+      .reduce((s, t) => s + Number(t.amount_kes), 0),
+    totalSms: smsLogs.length,
   };
 
   return (
@@ -158,204 +252,130 @@ export default function Admin() {
         <p className="text-sm text-muted-foreground mt-1">Complete platform management and oversight.</p>
       </div>
 
-      <TabsList className="grid w-full max-w-4xl grid-cols-7 glass-panel">
+      <TabsList className="grid w-full max-w-5xl grid-cols-7 glass-panel">
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="users">Users</TabsTrigger>
         <TabsTrigger value="payments">Payments</TabsTrigger>
         <TabsTrigger value="packages">Packages</TabsTrigger>
-        <TabsTrigger value="support">Support</TabsTrigger>
-        <TabsTrigger value="gateway">Gateway</TabsTrigger>
-        <TabsTrigger value="reports">Reports</TabsTrigger>
+        <TabsTrigger value="marketplace">Marketplace</TabsTrigger>
+        <TabsTrigger value="sender-ids">Sender IDs</TabsTrigger>
+        <TabsTrigger value="sms-logs">SMS Logs</TabsTrigger>
       </TabsList>
 
-      {/* Overview */}
+      {/* OVERVIEW */}
       <TabsContent value="overview" className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-5">
           <Card className="glass-card p-5">
             <Users className="h-5 w-5 text-primary mb-2" />
-            <div className="text-xs font-semibold uppercase text-muted-foreground mb-1">Users</div>
+            <div className="text-xs font-semibold uppercase text-muted-foreground">Users</div>
             <div className="font-display text-3xl font-bold">{stats.totalUsers}</div>
           </Card>
           <Card className="glass-card p-5">
             <DollarSign className="h-5 w-5 text-primary mb-2" />
-            <div className="text-xs font-semibold uppercase text-muted-foreground mb-1">Total Revenue</div>
-            <div className="font-display text-2xl font-bold">
-              KES {Math.round(stats.totalRevenue).toLocaleString()}
-            </div>
+            <div className="text-xs font-semibold uppercase text-muted-foreground">Revenue</div>
+            <div className="font-display text-2xl font-bold">KES {Math.round(stats.totalRevenue).toLocaleString()}</div>
           </Card>
           <Card className="glass-card p-5">
             <Activity className="h-5 w-5 text-primary mb-2" />
-            <div className="text-xs font-semibold uppercase text-muted-foreground mb-1">Today</div>
-            <div className="font-display text-2xl font-bold text-green-600">
-              KES {Math.round(stats.todayRevenue).toLocaleString()}
-            </div>
+            <div className="text-xs font-semibold uppercase text-muted-foreground">Today</div>
+            <div className="font-display text-2xl font-bold text-green-600">KES {Math.round(stats.todayRevenue).toLocaleString()}</div>
           </Card>
           <Card className="glass-card p-5">
             <AlertCircle className="h-5 w-5 text-primary mb-2" />
-            <div className="text-xs font-semibold uppercase text-muted-foreground mb-1">Transactions</div>
+            <div className="text-xs font-semibold uppercase text-muted-foreground">Transactions</div>
             <div className="font-display text-3xl font-bold">{stats.totalTransactions}</div>
           </Card>
           <Card className="glass-card p-5">
             <MessageSquare className="h-5 w-5 text-primary mb-2" />
-            <div className="text-xs font-semibold uppercase text-muted-foreground mb-1">Tickets</div>
-            <div className="font-display text-3xl font-bold text-red-600">{stats.pendingTickets}</div>
+            <div className="text-xs font-semibold uppercase text-muted-foreground">SMS Sent</div>
+            <div className="font-display text-3xl font-bold">{stats.totalSms}</div>
           </Card>
         </div>
       </TabsContent>
 
-      {/* Users */}
+      {/* USERS */}
       <TabsContent value="users" className="space-y-4">
-        <div className="flex gap-3">
-          <Input
-            placeholder="Search users..."
-            value={searchUser}
-            onChange={(e) => setSearchUser(e.target.value)}
-            className="flex-1"
-          />
-        </div>
-
+        <Input placeholder="Search users..." value={searchUser} onChange={(e) => setSearchUser(e.target.value)} />
         <Card className="glass-card overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead>Email</TableHead>
+                <TableHead>Name</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.slice(0, 20).map((user: any) => (
-                <TableRow key={user.id} className="hover:bg-white/50">
-                  <TableCell className="font-medium text-sm">{user.email}</TableCell>
-                  <TableCell className="text-sm">
-                    {new Date(user.created_at).toLocaleDateString()}
-                  </TableCell>
+              {users.slice(0, 50).map((u: any) => (
+                <TableRow key={u.id} className="hover:bg-white/50">
+                  <TableCell className="text-sm">{u.email}</TableCell>
+                  <TableCell className="text-sm">{u.full_name || "—"}</TableCell>
+                  <TableCell className="text-sm">{new Date(u.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell className="text-sm capitalize">{u.user_roles?.[0]?.role ?? "customer"}</TableCell>
                   <TableCell>
-                    <select className="px-2 py-1 rounded text-sm border border-border bg-white">
-                      <option>{user.user_roles?.[0]?.role || "customer"}</option>
-                      <option>Customer</option>
-                      <option>Reseller</option>
-                      <option>Developer</option>
-                      <option>Admin</option>
-                    </select>
-                  </TableCell>
-                  <TableCell>
-                    <Dialog open={creditDialogOpen && selectedUserId === user.id} onOpenChange={(open) => {
-                      setCreditDialogOpen(open);
-                      if (open) setSelectedUserId(user.id);
-                    }}>
-                      <DialogTrigger asChild>
-                        <Button size="sm" variant="outline" onClick={() => setSelectedUserId(user.id)}>
-                          <CreditCard className="h-3 w-3 mr-1" />
-                          Credit
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="glass-card-lg">
-                        <DialogHeader>
-                          <DialogTitle>Add SMS Credit to {user.full_name || user.email}</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div>
-                            <Label>Amount (SMS)</Label>
-                            <Input
-                              type="number"
-                              placeholder="100"
-                              value={creditAmount}
-                              onChange={(e) => setCreditAmount(e.target.value)}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label>Reason</Label>
-                            <Textarea
-                              placeholder="Admin credit reason..."
-                              value={creditReason}
-                              onChange={(e) => setCreditReason(e.target.value)}
-                              className="mt-1 h-20"
-                            />
-                          </div>
-                          <div className="flex gap-3">
-                            <Button variant="outline" onClick={() => setCreditDialogOpen(false)} className="flex-1">
-                              Cancel
-                            </Button>
-                            <Button
-                              onClick={() => addCreditMutation.mutate()}
-                              disabled={addCreditMutation.isPending}
-                              className="flex-1 gradient-primary text-white"
-                            >
-                              {addCreditMutation.isPending ? "Processing..." : "Credit"}
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <Button size="sm" variant="outline" onClick={() => { setSelectedUserId(u.id); setCreditDialogOpen(true); }}>
+                      <CreditCard className="h-3 w-3 mr-1" /> Credit
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </Card>
+
+        <Dialog open={creditDialogOpen} onOpenChange={setCreditDialogOpen}>
+          <DialogContent className="glass-card-lg">
+            <DialogHeader><DialogTitle>Credit SMS to user</DialogTitle></DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Amount (SMS)</Label>
+                <Input type="number" value={creditAmount} onChange={(e) => setCreditAmount(e.target.value)} className="mt-1" />
+              </div>
+              <div>
+                <Label>Reason (optional)</Label>
+                <Textarea value={creditReason} onChange={(e) => setCreditReason(e.target.value)} className="mt-1 h-20" />
+              </div>
+              <Button onClick={() => addCredit.mutate()} disabled={addCredit.isPending} className="w-full gradient-primary text-white">
+                {addCredit.isPending ? "Processing..." : "Credit"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </TabsContent>
 
-      {/* Payments */}
+      {/* PAYMENTS */}
       <TabsContent value="payments" className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-3 mb-4">
-          <Card className="glass-card p-4">
-            <div className="text-xs font-semibold text-muted-foreground mb-1">Total Payments</div>
-            <div className="font-display text-2xl font-bold">
-              KES {Math.round(stats.totalRevenue).toLocaleString()}
-            </div>
-          </Card>
-          <Card className="glass-card p-4">
-            <div className="text-xs font-semibold text-muted-foreground mb-1">Completed</div>
-            <div className="font-display text-2xl font-bold text-green-600">
-              {transactions.filter((t) => t.status === "completed").length}
-            </div>
-          </Card>
-          <Card className="glass-card p-4">
-            <div className="text-xs font-semibold text-muted-foreground mb-1">Failed</div>
-            <div className="font-display text-2xl font-bold text-red-600">
-              {transactions.filter((t) => t.status === "failed").length}
-            </div>
-          </Card>
-        </div>
-
         <Card className="glass-card overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead>Date</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>Amount</TableHead>
+                <TableHead>SMS</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Receipt</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions.slice(0, 20).map((tx) => (
+              {transactions.slice(0, 100).map((tx: any) => (
                 <TableRow key={tx.id} className="hover:bg-white/50">
-                  <TableCell className="text-sm">
-                    {new Date(tx.created_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="font-semibold">
-                    KES {Number(tx.amount_kes).toLocaleString()}
-                  </TableCell>
+                  <TableCell className="text-xs">{new Date(tx.created_at).toLocaleString()}</TableCell>
+                  <TableCell className="font-mono text-xs">{tx.phone}</TableCell>
+                  <TableCell className="text-xs capitalize">{tx.type ?? "sms"}</TableCell>
+                  <TableCell className="font-semibold">KES {Number(tx.amount_kes).toLocaleString()}</TableCell>
+                  <TableCell>{tx.sms_credited}</TableCell>
                   <TableCell>
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-semibold ${
-                        tx.status === "completed"
-                          ? "bg-green-100 text-green-800"
-                          : tx.status === "pending"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {tx.status}
-                    </span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                      tx.status === "completed" ? "bg-green-100 text-green-800" :
+                      tx.status === "pending" ? "bg-yellow-100 text-yellow-800" :
+                      "bg-red-100 text-red-800"
+                    }`}>{tx.status}</span>
                   </TableCell>
-                  <TableCell className="text-xs font-mono text-muted-foreground">
-                    {tx.mpesa_receipt || "—"}
-                  </TableCell>
+                  <TableCell className="text-xs font-mono">{tx.mpesa_receipt ?? "—"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -363,65 +383,13 @@ export default function Admin() {
         </Card>
       </TabsContent>
 
-      {/* Packages */}
+      {/* PACKAGES */}
       <TabsContent value="packages" className="space-y-4">
         <div className="flex justify-end">
-          <Dialog open={packagesDialogOpen} onOpenChange={setPackagesDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gradient-primary text-white">
-                <Plus className="h-4 w-4 mr-2" />
-                New Package
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="glass-card-lg">
-              <DialogHeader>
-                <DialogTitle>Create Package</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Package Name</Label>
-                  <Input
-                    placeholder="E.g., Pro Plan"
-                    value={packageForm.name}
-                    onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label>SMS Count</Label>
-                  <Input
-                    type="number"
-                    placeholder="10000"
-                    value={packageForm.sms_count}
-                    onChange={(e) =>
-                      setPackageForm({ ...packageForm, sms_count: parseInt(e.target.value) || 0 })
-                    }
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label>Price (KES)</Label>
-                  <Input
-                    type="number"
-                    placeholder="5000"
-                    value={packageForm.total_price}
-                    onChange={(e) =>
-                      setPackageForm({ ...packageForm, total_price: parseFloat(e.target.value) || 0 })
-                    }
-                    className="mt-1"
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => setPackagesDialogOpen(false)} className="flex-1">
-                    Cancel
-                  </Button>
-                  <Button className="flex-1 gradient-primary text-white">Create</Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button className="gradient-primary text-white" onClick={() => { setPkgForm(emptyPkg); setPkgDialogOpen(true); }}>
+            <Plus className="h-4 w-4 mr-2" /> New Package
+          </Button>
         </div>
-
         <Card className="glass-card overflow-hidden">
           <Table>
             <TableHeader>
@@ -429,28 +397,39 @@ export default function Admin() {
                 <TableHead>Name</TableHead>
                 <TableHead>SMS</TableHead>
                 <TableHead>Price</TableHead>
+                <TableHead>Per SMS</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Action</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {packages.map((pkg) => (
-                <TableRow key={pkg.id} className="hover:bg-white/50">
-                  <TableCell className="font-medium">{pkg.name}</TableCell>
-                  <TableCell>{pkg.sms_count.toLocaleString()}</TableCell>
-                  <TableCell>KES {Number(pkg.total_price).toLocaleString()}</TableCell>
+              {packages.map((p: any) => (
+                <TableRow key={p.id} className="hover:bg-white/50">
+                  <TableCell className="font-medium">{p.name}</TableCell>
+                  <TableCell>{p.sms_count.toLocaleString()}</TableCell>
+                  <TableCell>KES {Number(p.total_price).toLocaleString()}</TableCell>
+                  <TableCell>KES {Number(p.price_per_sms).toFixed(2)}</TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 rounded text-xs font-semibold ${pkg.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
-                      {pkg.is_active ? "Active" : "Inactive"}
+                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${p.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
+                      {p.is_active ? "Active" : "Inactive"}
                     </span>
                   </TableCell>
-                  <TableCell>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => updatePackageMutation.mutate(pkg)}
-                    >
-                      {pkg.is_active ? "Deactivate" : "Activate"}
+                  <TableCell className="flex gap-1">
+                    <Button size="sm" variant="outline" onClick={() => { setPkgForm({
+                      id: p.id, name: p.name, slug: p.slug, sms_count: p.sms_count,
+                      total_price: Number(p.total_price), price_per_sms: Number(p.price_per_sms),
+                      description: p.description ?? "", notes: p.notes ?? "",
+                      sort_order: p.sort_order, is_active: p.is_active,
+                    }); setPkgDialogOpen(true); }}>
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => togglePkg.mutate(p)}>
+                      {p.is_active ? "Off" : "On"}
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-red-600" onClick={() => {
+                      if (confirm(`Delete ${p.name}?`)) deletePkg.mutate(p.id);
+                    }}>
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -458,36 +437,129 @@ export default function Admin() {
             </TableBody>
           </Table>
         </Card>
+
+        <Dialog open={pkgDialogOpen} onOpenChange={setPkgDialogOpen}>
+          <DialogContent className="glass-card-lg max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>{pkgForm.id ? "Edit" : "New"} Package</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div><Label>Name</Label><Input value={pkgForm.name} onChange={(e) => setPkgForm({ ...pkgForm, name: e.target.value })} /></div>
+              <div><Label>Slug</Label><Input value={pkgForm.slug} placeholder="auto-generated if empty" onChange={(e) => setPkgForm({ ...pkgForm, slug: e.target.value })} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>SMS Count</Label><Input type="number" value={pkgForm.sms_count} onChange={(e) => setPkgForm({ ...pkgForm, sms_count: parseInt(e.target.value) || 0 })} /></div>
+                <div><Label>Total Price (KES)</Label><Input type="number" value={pkgForm.total_price} onChange={(e) => setPkgForm({ ...pkgForm, total_price: parseFloat(e.target.value) || 0 })} /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Price per SMS</Label><Input type="number" step="0.01" value={pkgForm.price_per_sms} onChange={(e) => setPkgForm({ ...pkgForm, price_per_sms: parseFloat(e.target.value) || 0 })} /></div>
+                <div><Label>Sort Order</Label><Input type="number" value={pkgForm.sort_order} onChange={(e) => setPkgForm({ ...pkgForm, sort_order: parseInt(e.target.value) || 0 })} /></div>
+              </div>
+              <div><Label>Description</Label><Input value={pkgForm.description} onChange={(e) => setPkgForm({ ...pkgForm, description: e.target.value })} /></div>
+              <div><Label>Notes / Badge Text</Label><Input value={pkgForm.notes} onChange={(e) => setPkgForm({ ...pkgForm, notes: e.target.value })} /></div>
+              <div className="flex items-center gap-2"><Switch checked={pkgForm.is_active} onCheckedChange={(v) => setPkgForm({ ...pkgForm, is_active: v })} /><Label>Active</Label></div>
+              <Button onClick={() => savePkg.mutate()} disabled={savePkg.isPending} className="w-full gradient-primary text-white">
+                {savePkg.isPending ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </TabsContent>
 
-      {/* Support Tickets */}
-      <TabsContent value="support" className="space-y-4">
+      {/* MARKETPLACE */}
+      <TabsContent value="marketplace" className="space-y-4">
+        <div className="flex justify-end">
+          <Button className="gradient-primary text-white" onClick={() => { setMarketForm(emptyMarket); setMarketDialogOpen(true); }}>
+            <Plus className="h-4 w-4 mr-2" /> New Sender ID
+          </Button>
+        </div>
         <Card className="glass-card overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead>User</TableHead>
-                <TableHead>Subject</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Action</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Code</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Sales</TableHead>
+                <TableHead>Active</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tickets.map((ticket) => (
-                <TableRow key={ticket.id} className="hover:bg-white/50">
-                  <TableCell className="text-sm">{ticket.user}</TableCell>
-                  <TableCell className="font-medium">{ticket.subject}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                      ticket.priority === "high" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
-                    }`}>
-                      {ticket.priority}
-                    </span>
+              {marketplace.map((m: any) => (
+                <TableRow key={m.id} className="hover:bg-white/50">
+                  <TableCell className="font-medium">{m.name}</TableCell>
+                  <TableCell className="font-mono text-xs">{m.code}</TableCell>
+                  <TableCell>KES {Number(m.price_kes).toLocaleString()}</TableCell>
+                  <TableCell>{m.sales_count}</TableCell>
+                  <TableCell>{m.is_active ? "Yes" : "No"}</TableCell>
+                  <TableCell className="flex gap-1">
+                    <Button size="sm" variant="outline" onClick={() => { setMarketForm({
+                      id: m.id, name: m.name, code: m.code, description: m.description ?? "",
+                      price_kes: Number(m.price_kes), sort_order: m.sort_order, is_active: m.is_active,
+                    }); setMarketDialogOpen(true); }}><Edit className="h-3 w-3" /></Button>
+                    <Button size="sm" variant="outline" className="text-red-600" onClick={() => {
+                      if (confirm(`Delete ${m.name}?`)) deleteMarket.mutate(m.id);
+                    }}><Trash2 className="h-3 w-3" /></Button>
                   </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+
+        <Dialog open={marketDialogOpen} onOpenChange={setMarketDialogOpen}>
+          <DialogContent className="glass-card-lg max-w-md">
+            <DialogHeader><DialogTitle>{marketForm.id ? "Edit" : "New"} Marketplace Sender ID</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div><Label>Display Name</Label><Input value={marketForm.name} onChange={(e) => setMarketForm({ ...marketForm, name: e.target.value })} /></div>
+              <div><Label>Sender Code (3-11 chars, uppercase)</Label><Input maxLength={11} value={marketForm.code} onChange={(e) => setMarketForm({ ...marketForm, code: e.target.value.toUpperCase() })} /></div>
+              <div><Label>Description</Label><Textarea value={marketForm.description} onChange={(e) => setMarketForm({ ...marketForm, description: e.target.value })} className="h-20" /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Price (KES)</Label><Input type="number" value={marketForm.price_kes} onChange={(e) => setMarketForm({ ...marketForm, price_kes: parseFloat(e.target.value) || 0 })} /></div>
+                <div><Label>Sort Order</Label><Input type="number" value={marketForm.sort_order} onChange={(e) => setMarketForm({ ...marketForm, sort_order: parseInt(e.target.value) || 0 })} /></div>
+              </div>
+              <div className="flex items-center gap-2"><Switch checked={marketForm.is_active} onCheckedChange={(v) => setMarketForm({ ...marketForm, is_active: v })} /><Label>Active</Label></div>
+              <Button onClick={() => saveMarket.mutate()} disabled={saveMarket.isPending} className="w-full gradient-primary text-white">
+                {saveMarket.isPending ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </TabsContent>
+
+      {/* SENDER ID REQUESTS */}
+      <TabsContent value="sender-ids" className="space-y-4">
+        <Card className="glass-card overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Sender ID</TableHead>
+                <TableHead>Business</TableHead>
+                <TableHead>Purpose</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {senderIdReqs.map((s: any) => (
+                <TableRow key={s.id} className="hover:bg-white/50">
+                  <TableCell className="font-mono font-semibold">{s.sender_id}</TableCell>
+                  <TableCell className="text-sm">{s.business_name}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{s.purpose}</TableCell>
                   <TableCell>
-                    <Button size="sm" variant="outline" onClick={() => setSupportDialogOpen(true)}>
-                      Reply
-                    </Button>
+                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                      s.status === "approved" || s.status === "active" ? "bg-green-100 text-green-800" :
+                      s.status === "pending" ? "bg-yellow-100 text-yellow-800" :
+                      "bg-red-100 text-red-800"
+                    }`}>{s.status}</span>
+                  </TableCell>
+                  <TableCell className="text-xs">{new Date(s.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell className="flex gap-1">
+                    {s.status === "pending" && (
+                      <>
+                        <Button size="sm" className="bg-green-600 text-white hover:bg-green-700" onClick={() => approveSenderId.mutate({ id: s.id, status: "approved" })}>Approve</Button>
+                        <Button size="sm" variant="outline" className="text-red-600" onClick={() => approveSenderId.mutate({ id: s.id, status: "rejected" })}>Reject</Button>
+                      </>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -496,62 +568,44 @@ export default function Admin() {
         </Card>
       </TabsContent>
 
-      {/* Gateway */}
-      <TabsContent value="gateway" className="space-y-4">
-        <Card className="glass-card p-6 space-y-4">
-          <h2 className="font-semibold mb-4">SMS Gateway Configuration</h2>
-          <div className="space-y-4">
-            <div>
-              <Label>Environment</Label>
-              <select
-                value={selectedEnv}
-                onChange={(e) => setSelectedEnv(e.target.value)}
-                className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-white"
-              >
-                <option value="sandbox">Sandbox (Testing)</option>
-                <option value="production">Production (Live)</option>
-              </select>
-            </div>
-            <div>
-              <Label>SMS Provider</Label>
-              <select className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-white">
-                <option>Africa's Talking</option>
-                <option>Twilio</option>
-                <option>Nexmo</option>
-              </select>
-            </div>
-            <div>
-              <Label>Daily SMS Limit</Label>
-              <Input type="number" placeholder="100000" className="mt-1" />
-            </div>
-            <div>
-              <Label>Minimum Package (KES) - Allow users with this balance to buy SMS</Label>
-              <Input type="number" placeholder="50" className="mt-1" />
-              <p className="text-xs text-muted-foreground mt-1">
-                Users with at least this KES balance can purchase SMS packages
-              </p>
-            </div>
-            <Button className="w-full gradient-primary text-white">Update Settings</Button>
-          </div>
+      {/* SMS LOGS — All users */}
+      <TabsContent value="sms-logs" className="space-y-4">
+        <Input placeholder="Search by phone..." value={smsSearch} onChange={(e) => setSmsSearch(e.target.value)} />
+        <Card className="glass-card overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Sent At</TableHead>
+                <TableHead>User</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Message</TableHead>
+                <TableHead>Sender</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {smsLogs.map((log: any) => {
+                const user = users.find((u: any) => u.id === log.user_id);
+                return (
+                  <TableRow key={log.id} className="hover:bg-white/50">
+                    <TableCell className="text-xs">{new Date(log.created_at).toLocaleString()}</TableCell>
+                    <TableCell className="text-xs">{user?.email ?? log.user_id.slice(0, 8)}</TableCell>
+                    <TableCell className="font-mono text-xs">{log.phone}</TableCell>
+                    <TableCell className="text-xs max-w-md truncate">{log.message}</TableCell>
+                    <TableCell className="text-xs font-mono">{log.sender_id ?? "—"}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                        log.status === "delivered" || log.status === "sent" ? "bg-green-100 text-green-800" :
+                        log.status === "queued" ? "bg-yellow-100 text-yellow-800" :
+                        "bg-red-100 text-red-800"
+                      }`}>{log.status}</span>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </Card>
-      </TabsContent>
-
-      {/* Reports */}
-      <TabsContent value="reports" className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Button variant="outline" className="h-24 flex flex-col">
-            <FileText className="h-6 w-6 mb-2" />
-            Export Users
-          </Button>
-          <Button variant="outline" className="h-24 flex flex-col">
-            <FileText className="h-6 w-6 mb-2" />
-            Export Transactions
-          </Button>
-          <Button variant="outline" className="h-24 flex flex-col">
-            <FileText className="h-6 w-6 mb-2" />
-            Export SMS Logs
-          </Button>
-        </div>
       </TabsContent>
     </Tabs>
   );
