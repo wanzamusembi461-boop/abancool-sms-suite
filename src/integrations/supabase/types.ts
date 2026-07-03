@@ -317,6 +317,48 @@ export type Database = {
         }
         Relationships: []
       }
+      sender_id_marketplace: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          price_kes: number
+          rating: number | null
+          sales_count: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          price_kes: number
+          rating?: number | null
+          sales_count?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_kes?: number
+          rating?: number | null
+          sales_count?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sender_ids: {
         Row: {
           admin_notes: string | null
@@ -461,8 +503,10 @@ export type Database = {
           package_id: string | null
           phone: string
           raw_callback: Json | null
+          sender_id_market_id: string | null
           sms_credited: number
           status: Database["public"]["Enums"]["transaction_status"]
+          type: string
           updated_at: string
           user_id: string
         }
@@ -475,8 +519,10 @@ export type Database = {
           package_id?: string | null
           phone: string
           raw_callback?: Json | null
+          sender_id_market_id?: string | null
           sms_credited?: number
           status?: Database["public"]["Enums"]["transaction_status"]
+          type?: string
           updated_at?: string
           user_id: string
         }
@@ -489,8 +535,10 @@ export type Database = {
           package_id?: string | null
           phone?: string
           raw_callback?: Json | null
+          sender_id_market_id?: string | null
           sms_credited?: number
           status?: Database["public"]["Enums"]["transaction_status"]
+          type?: string
           updated_at?: string
           user_id?: string
         }
@@ -551,6 +599,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      credit_sms: {
+        Args: { _amount: number; _user_id: string }
+        Returns: undefined
+      }
+      deduct_sms: {
+        Args: { _amount: number; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
