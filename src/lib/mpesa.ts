@@ -4,51 +4,23 @@
  */
 
 /**
- * Validate phone number format (Kenyan mobile only)
- * Valid: 0712345678, 254712345678
- * Formats:
- * - 07XXXXXXXX (mobile - Safaricom, Airtel, Telkom)
- * - 2547XXXXXXXX (E.164 format - mobile only)
- * Rejects all landlines (01*, 2541*, etc.)
+ * Validate Kenyan mobile numbers.
+ * Accepts Safaricom / Airtel / Telkom prefixes (07*, 01*) and their E.164 forms (2547*, 2541*).
  */
 export function validatePhoneNumber(phone: string): boolean {
-  const trimmed = phone.trim();
-  
-  // Reject any landline numbers (01* or 2541*)
-  if (trimmed.startsWith("01") || trimmed.startsWith("2541")) {
-    return false;
-  }
-  
-  // Valid patterns:
-  // 07XXXXXXXX (10 digits, mobile)
-  // 2547XXXXXXXX (12 digits, E.164 mobile only)
-  const regex = /^(07\d{8}|2547\d{8})$/;
+  const trimmed = phone.trim().replace(/\s+/g, "");
+  const regex = /^(0(7|1)\d{8}|254(7|1)\d{8})$/;
   return regex.test(trimmed);
 }
 
 /**
- * Normalize phone number to international format (2547XXXXXXXX)
- * Rejects all landline numbers (01*, 2541*, etc.)
+ * Normalize to international format 2547XXXXXXXX / 2541XXXXXXXX
  */
 export function normalizePhoneNumber(phone: string): string {
-  const trimmed = phone.trim();
-  
-  // Reject all landlines
-  if (trimmed.startsWith("01") || trimmed.startsWith("2541")) {
-    throw new Error("Landline numbers are not supported for SMS. Please use a mobile number (07* or 254712*)");
-  }
-  
-  // Already in 2547XXXXXXXX format
-  if (trimmed.match(/^2547\d{8}$/)) {
-    return trimmed;
-  }
-  
-  // Convert from 07XXXXXXXX to 2547XXXXXXXX
-  if (trimmed.startsWith("0")) {
-    return "254" + trimmed.slice(1);
-  }
-  
-  // Assume already normalized or invalid
+  const trimmed = phone.trim().replace(/\s+/g, "");
+  if (/^254(7|1)\d{8}$/.test(trimmed)) return trimmed;
+  if (/^0(7|1)\d{8}$/.test(trimmed)) return "254" + trimmed.slice(1);
+  if (/^(7|1)\d{8}$/.test(trimmed)) return "254" + trimmed;
   return trimmed;
 }
 
