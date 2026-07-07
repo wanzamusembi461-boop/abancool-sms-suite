@@ -173,7 +173,7 @@ export default function BuySMS() {
                 <Plus className="h-8 w-8 text-muted-foreground mb-3" />
                 <div className="text-sm font-medium text-muted-foreground">Custom Amount</div>
                 <p className="text-xs text-muted-foreground mt-2 text-center">
-                  Start with any amount (min. KES 50)
+                  Pay any amount you can afford — from KES 10 up.
                 </p>
               </div>
             </DialogTrigger>
