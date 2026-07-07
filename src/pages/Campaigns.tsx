@@ -87,6 +87,69 @@ export default function Campaigns() {
     },
   });
 
+  const { data: myContacts = [] } = useQuery({
+    queryKey: ["quick-contacts", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("contacts")
+        .select("id, name, phone")
+        .eq("user_id", user!.id)
+        .order("name", { ascending: true });
+      return data ?? [];
+    },
+  });
+
+  const filteredContacts = useMemo(() => {
+    const q = quickContactSearch.trim().toLowerCase();
+    if (!q) return myContacts;
+    return myContacts.filter((c: any) =>
+      (c.name || "").toLowerCase().includes(q) || (c.phone || "").includes(q)
+    );
+  }, [myContacts, quickContactSearch]);
+
+  const quickPhoneList = useMemo(() => {
+    const manual = quickManualPhones
+      .split(/[\s,;\n]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const fromContacts = myContacts
+      .filter((c: any) => quickSelectedContacts.has(c.id))
+      .map((c: any) => c.phone);
+    return Array.from(new Set([...manual, ...fromContacts]));
+  }, [quickManualPhones, quickSelectedContacts, myContacts]);
+
+  const handleQuickSend = async () => {
+    if (!quickMessage.trim()) return toast.error("Message required");
+    if (quickPhoneList.length === 0) return toast.error("Add at least one phone number");
+    const totalBalance = (balance?.paid_sms ?? 0) + (balance?.free_sms ?? 0);
+    if (totalBalance < quickPhoneList.length) {
+      return toast.error(`Insufficient balance. Need ${quickPhoneList.length}, have ${totalBalance}`);
+    }
+    if (!confirm(`Send SMS to ${quickPhoneList.length} recipient(s)?`)) return;
+    setQuickSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-campaign", {
+        body: {
+          phones: quickPhoneList,
+          message: quickMessage,
+          sender_id: quickSender || undefined,
+        },
+      });
+      if (error) throw error;
+      toast.success(`Sent ${data.sent}/${data.total}${data.failed ? ` (${data.failed} refunded)` : ""}`);
+      queryClient.invalidateQueries({ queryKey: ["sms-balance"] });
+      setQuickOpen(false);
+      setQuickMessage("");
+      setQuickManualPhones("");
+      setQuickSelectedContacts(new Set());
+    } catch (e: any) {
+      toast.error(e.message || "Send failed");
+    } finally {
+      setQuickSending(false);
+    }
+  };
+
   const createMutation = useMutation({
     mutationFn: async () => {
       if (!formData.name || !formData.message) throw new Error("Name and message required");
