@@ -73,11 +73,14 @@ export default function BuySMS() {
       alert("Minimum amount is KES 10");
       return;
     }
-    // Calculation: 0.5 KES per SMS (based on starter package)
-    const smsCount = Math.floor(amount / 0.5);
+    // Rate: derived from the cheapest active package if any, else 0.5 KES/SMS
+    const rate = packages && packages.length
+      ? Math.min(...packages.map((p: any) => Number(p.price_per_sms) || 0.5))
+      : 0.5;
+    const smsCount = Math.max(1, Math.floor(amount / rate));
     setSelectedPackage({
       id: "custom",
-      name: `Custom - KES ${amount}`,
+      name: `Custom — KES ${amount}`,
       total_price: amount,
       sms_count: smsCount,
     });
