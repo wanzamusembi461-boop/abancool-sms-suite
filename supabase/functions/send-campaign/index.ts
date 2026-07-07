@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.47.0";
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const talksasaKey = Deno.env.get("TALKSASA_API_KEY")!;
-const defaultSender = Deno.env.get("TALKSASA_SENDER_ID") || "INFO";
+const defaultSender = Deno.env.get("TALKSASA_SENDER_ID") || "ABAN_COOL";
 
 const admin = createClient(supabaseUrl, supabaseServiceKey);
 
