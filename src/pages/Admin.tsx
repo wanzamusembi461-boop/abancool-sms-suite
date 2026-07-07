@@ -124,6 +124,16 @@ export default function Admin() {
     },
   });
 
+  const { data: talksasaBalance } = useQuery({
+    queryKey: ["talksasa-balance"],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("talksasa-balance", { method: "GET" });
+      if (error) return null;
+      return data?.upstream ?? null;
+    },
+    refetchInterval: 60_000,
+  });
+
   const addCredit = useMutation({
     mutationFn: async () => {
       if (!selectedUserId || !creditAmount) throw new Error("User and amount required");
@@ -291,6 +301,21 @@ export default function Admin() {
             <div className="font-display text-3xl font-bold">{stats.totalSms}</div>
           </Card>
         </div>
+
+        <Card className="glass-card p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs font-semibold uppercase text-muted-foreground">TalkSasa Upstream Balance</div>
+              <div className="font-display text-2xl font-bold mt-1">
+                {talksasaBalance
+                  ? (talksasaBalance.data?.balance ?? talksasaBalance.balance ?? JSON.stringify(talksasaBalance).slice(0, 60))
+                  : "—"}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Live SMS credits remaining at TalkSasa (auto-refreshes every 60s).</p>
+            </div>
+            <Activity className="h-8 w-8 text-primary/60" />
+          </div>
+        </Card>
       </TabsContent>
 
       {/* USERS */}
