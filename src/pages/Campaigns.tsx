@@ -233,13 +233,17 @@ export default function Campaigns() {
             Create and send bulk SMS campaigns. Balance: <span className="font-semibold">{((balance?.paid_sms ?? 0) + (balance?.free_sms ?? 0)).toLocaleString()} SMS</span>
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gradient-primary text-white">
-              <Plus className="h-4 w-4 mr-2" /> New Campaign
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="glass-card-lg max-w-lg">
+        <div className="flex gap-2">
+          <Button variant="outline" className="glass-panel" onClick={() => setQuickOpen(true)}>
+            <Zap className="h-4 w-4 mr-2 text-primary" /> Quick Send
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gradient-primary text-white">
+                <Plus className="h-4 w-4 mr-2" /> New Campaign
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="glass-card-lg max-w-lg">
             <DialogHeader><DialogTitle>New Campaign</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div>
