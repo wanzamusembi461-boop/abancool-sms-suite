@@ -124,6 +124,16 @@ export default function Admin() {
     },
   });
 
+  const { data: talksasaBalance } = useQuery({
+    queryKey: ["talksasa-balance"],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("talksasa-balance", { method: "GET" });
+      if (error) return null;
+      return data?.upstream ?? null;
+    },
+    refetchInterval: 60_000,
+  });
+
   const addCredit = useMutation({
     mutationFn: async () => {
       if (!selectedUserId || !creditAmount) throw new Error("User and amount required");
