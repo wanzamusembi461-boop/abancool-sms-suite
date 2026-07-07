@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Loader2, Send, Archive, Eye } from "lucide-react";
+import { Plus, Loader2, Send, Archive, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,12 +20,14 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 export default function Campaigns() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     message: "",
@@ -34,6 +36,14 @@ export default function Campaigns() {
     group_id: "",
   });
   const [sendingId, setSendingId] = useState<string | null>(null);
+
+  // Quick send state
+  const [quickMessage, setQuickMessage] = useState("");
+  const [quickSender, setQuickSender] = useState("");
+  const [quickManualPhones, setQuickManualPhones] = useState("");
+  const [quickSelectedContacts, setQuickSelectedContacts] = useState<Set<string>>(new Set());
+  const [quickContactSearch, setQuickContactSearch] = useState("");
+  const [quickSending, setQuickSending] = useState(false);
 
   const { data: campaigns = [], isLoading } = useQuery({
     queryKey: ["campaigns", user?.id],
