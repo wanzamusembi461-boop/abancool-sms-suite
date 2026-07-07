@@ -294,7 +294,77 @@ export default function Campaigns() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
+      {/* QUICK SEND */}
+      <Dialog open={quickOpen} onOpenChange={setQuickOpen}>
+        <DialogContent className="glass-card-lg max-w-2xl max-h-[92vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Quick Send SMS</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Message</Label>
+              <Textarea value={quickMessage} onChange={(e) => setQuickMessage(e.target.value)} className="mt-1 h-24" placeholder="Type your SMS message..." />
+              <p className="text-xs text-muted-foreground mt-1">{quickMessage.length} characters</p>
+            </div>
+            <div>
+              <Label>Sender ID</Label>
+              <Select value={quickSender} onValueChange={setQuickSender}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="ABAN_COOL (default)" /></SelectTrigger>
+                <SelectContent>
+                  {senderIds.map((s: any) => <SelectItem key={s.sender_id} value={s.sender_id}>{s.sender_id}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Type phone numbers</Label>
+              <Textarea
+                value={quickManualPhones}
+                onChange={(e) => setQuickManualPhones(e.target.value)}
+                placeholder="0712345678, 0101234567, 254712345678 — separated by comma, space, or new line"
+                className="mt-1 h-20 font-mono text-xs"
+              />
+            </div>
+            <div>
+              <Label>Or pick from your contacts ({quickSelectedContacts.size} selected)</Label>
+              <Input
+                placeholder="Search contacts..."
+                value={quickContactSearch}
+                onChange={(e) => setQuickContactSearch(e.target.value)}
+                className="mt-1"
+              />
+              <div className="mt-2 max-h-52 overflow-y-auto glass-panel divide-y divide-border/40 rounded-xl">
+                {filteredContacts.length === 0 ? (
+                  <div className="p-3 text-xs text-muted-foreground text-center">No contacts</div>
+                ) : filteredContacts.map((c: any) => (
+                  <label key={c.id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-white/40">
+                    <Checkbox
+                      checked={quickSelectedContacts.has(c.id)}
+                      onCheckedChange={(checked) => {
+                        const next = new Set(quickSelectedContacts);
+                        if (checked) next.add(c.id); else next.delete(c.id);
+                        setQuickSelectedContacts(next);
+                      }}
+                    />
+                    <span className="flex-1 text-sm truncate">{c.name || "—"}</span>
+                    <span className="font-mono text-xs text-muted-foreground">{c.phone}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="glass-panel p-3 rounded-xl text-sm flex items-center justify-between">
+              <span>Total recipients</span>
+              <span className="font-semibold">{quickPhoneList.length}</span>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" onClick={() => setQuickOpen(false)} className="flex-1">Cancel</Button>
+              <Button onClick={handleQuickSend} disabled={quickSending} className="flex-1 gradient-primary text-white">
+                {quickSending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</> : <><Send className="h-4 w-4 mr-2" />Send Now</>}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid gap-4 sm:grid-cols-4">
         <Card className="glass-card p-4"><div className="text-xs font-semibold uppercase text-muted-foreground">Total</div><div className="font-display text-2xl font-bold">{campaigns.length}</div></Card>
