@@ -37,6 +37,13 @@ const bodySchema = z.object({
 type RequestBody = z.infer<typeof bodySchema>;
 
 // ===== UTILITY FUNCTIONS =====
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
+  "Content-Type": "application/json",
+};
+
 function normalizePhone(phone: string): string {
   const trimmed = phone.trim();
   if (trimmed.startsWith("254")) return trimmed;
