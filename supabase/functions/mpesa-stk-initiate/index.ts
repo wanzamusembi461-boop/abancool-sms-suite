@@ -119,7 +119,7 @@ export default async function handler(req: Request) {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: corsHeaders,
       });
     }
 
@@ -133,7 +133,7 @@ export default async function handler(req: Request) {
       if (!amount || !sender_id_market_id) {
         return new Response(
           JSON.stringify({ error: "Amount and sender_id_market_id required for sender_id purchase" }),
-          { status: 400, headers: { "Content-Type": "application/json" } }
+          { status: 400, headers: corsHeaders }
         );
       }
       finalAmount = Math.ceil(amount);
@@ -144,7 +144,7 @@ export default async function handler(req: Request) {
       if (!package_id) {
         return new Response(
           JSON.stringify({ error: "Package ID required for SMS purchase" }),
-          { status: 400, headers: { "Content-Type": "application/json" } }
+          { status: 400, headers: corsHeaders }
         );
       }
 
@@ -161,7 +161,7 @@ export default async function handler(req: Request) {
           JSON.stringify({ error: "Package not found or inactive" }),
           {
             status: 404,
-            headers: { "Content-Type": "application/json" },
+            headers: corsHeaders,
           }
         );
       }
@@ -219,7 +219,7 @@ export default async function handler(req: Request) {
         }),
         {
           status: 400,
-          headers: { "Content-Type": "application/json" },
+          headers: corsHeaders,
         }
       );
     }
@@ -234,7 +234,7 @@ export default async function handler(req: Request) {
     } catch {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: corsHeaders,
       });
     }
 
@@ -264,7 +264,7 @@ export default async function handler(req: Request) {
         }),
         {
           status: 500,
-          headers: { "Content-Type": "application/json" },
+          headers: corsHeaders,
         }
       );
     }
@@ -279,7 +279,7 @@ export default async function handler(req: Request) {
       }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: corsHeaders,
       }
     );
   } catch (error) {
@@ -293,7 +293,7 @@ export default async function handler(req: Request) {
         }),
         {
           status: 400,
-          headers: { "Content-Type": "application/json" },
+          headers: corsHeaders,
         }
       );
     }
@@ -304,7 +304,7 @@ export default async function handler(req: Request) {
       }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: corsHeaders,
       }
     );
   }
