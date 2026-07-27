@@ -68,15 +68,17 @@ function generatePassword(
 
 async function getDarajaToken(): Promise<string> {
   const auth = btoa(`${mpesaConsumerKey}:${mpesaConsumerSecret}`);
-  const response = await fetch(`${DARAJA_BASE_URL}/oauth/v1/generate`, {
-    method: "GET",
-    headers: {
-      Authorization: `Basic ${auth}`,
-    },
-  });
+  const response = await fetch(
+    `${DARAJA_BASE_URL}/oauth/v1/generate?grant_type=client_credentials`,
+    {
+      method: "GET",
+      headers: { Authorization: `Basic ${auth}` },
+    }
+  );
 
   if (!response.ok) {
-    throw new Error("Failed to get Daraja token");
+    const errText = await response.text().catch(() => "");
+    throw new Error(`Failed to get Daraja token: ${response.status} ${errText}`);
   }
 
   const data = (await response.json()) as { access_token: string };
