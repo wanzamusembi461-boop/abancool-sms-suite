@@ -96,14 +96,7 @@ async function getDarajaToken(): Promise<string> {
 export default async function handler(req: Request) {
   // Allow CORS
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      },
-    });
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
