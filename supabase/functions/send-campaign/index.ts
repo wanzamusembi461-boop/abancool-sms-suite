@@ -24,24 +24,38 @@ function normalizePhone(p: string): string {
 }
 
 async function sendOne(phone: string, message: string, senderId: string) {
-  // TalkSasa v3 REST
-  const res = await fetch("https://bulksms.talksasa.com/api/v3/sms/send", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${talksasaKey}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      recipient: phone,
-      sender_id: senderId,
-      type: "plain",
-      message,
-    }),
-  });
-  const data = await res.json().catch(() => ({}));
-  return { ok: res.ok && (data?.status === "success" || data?.code === "ok"), data };
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 20000);
+  try {
+    const res = await fetch("https://bulksms.talksasa.com/api/v3/sms/send", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${talksasaKey}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        recipient: phone,
+        sender_id: senderId,
+        type: "plain",
+        message,
+      }),
+      signal: ctrl.signal,
+    });
+    const text = await res.text();
+    let data: any = {};
+    try { data = JSON.parse(text); } catch { data = { raw: text }; }
+    const ok = res.ok && (data?.status === "success" || data?.code === "ok");
+    if (!ok) console.error("TalkSasa send failed", res.status, data);
+    return { ok, data, status: res.status };
+  } catch (e) {
+    console.error("TalkSasa fetch error", e);
+    return { ok: false, data: { error: e instanceof Error ? e.message : String(e) }, status: 0 };
+  } finally {
+    clearTimeout(timer);
+  }
 }
+
 
 export default async function handler(req: Request) {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
