@@ -26,8 +26,8 @@ const bodySchema = z.object({
   phone: z
     .string()
     .regex(
-      /^(07\d{8}|2547\d{8})$/,
-      "Invalid phone format. Use 0712345678 or 2547XXXXXXXX (mobile only). Landlines not supported."
+      /^(0(7|1)\d{8}|254(7|1)\d{8})$/,
+      "Invalid phone format. Use 07/01XXXXXXXX or 2547/2541XXXXXXXX."
     ),
   amount: z.number().optional(),
   type: z.enum(["sms", "sender_id"]).optional().default("sms"),
