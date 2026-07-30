@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, AlertCircle, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -28,21 +28,40 @@ export function PaymentPollingModal({
 }: PaymentPollingModalProps) {
   const [timeRemaining, setTimeRemaining] = useState(timeout);
   const [hasTimedOut, setHasTimedOut] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   // Poll status every 3 seconds
-  const { data: status, isLoading, error } = useQuery({
+  const { data: status, isLoading, error, refetch } = useQuery({
     queryKey: ["transaction-status", transaction_id],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("mpesa-status-check", {
-        body: { transaction_id },
-      });
+      try {
+        const { data, error } = await supabase.functions.invoke("mpesa-status-check", {
+          body: { transaction_id },
+        });
 
-      if (error) throw error;
-      return data;
+        if (error) throw error;
+        return data;
+      } catch (err) {
+        // If the function call fails, return a pending status to avoid UI crash
+        console.error("Status check failed:", err);
+        return { status: "pending", message: "Checking payment status..." };
+      }
     },
-    refetchInterval: 3000,
+    refetchInterval: (data) => {
+      // Stop polling if completed or failed
+      if (data?.status === "completed" || data?.status === "failed") {
+        return false;
+      }
+      // Stop polling after timeout
+      if (hasTimedOut) {
+        return false;
+      }
+      // Poll every 3 seconds otherwise
+      return 3000;
+    },
     enabled: open && !hasTimedOut,
-    retry: true,
+    retry: 1,
+    retryDelay: 1000,
   });
 
   // Handle timeout countdown
@@ -85,6 +104,15 @@ export function PaymentPollingModal({
 
   const isCompleted = status?.status === "completed";
   const isFailed = status?.status === "failed";
+
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    try {
+      await refetch();
+    } finally {
+      setIsRetrying(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,7 +190,7 @@ export function PaymentPollingModal({
               >
                 <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
                 <div className="text-xs text-yellow-800">
-                  Payment timeout. Please check your phone to complete the transaction, then try again.
+                  Payment timeout. Please check your phone to complete the transaction, then retry below.
                 </div>
               </motion.div>
             )}
@@ -181,11 +209,25 @@ export function PaymentPollingModal({
               </motion.div>
             )}
 
-            {/* Close Button (only after timeout) */}
+            {/* Retry Button (always visible on timeout) */}
             {hasTimedOut && (
-              <Button onClick={() => onOpenChange(false)} variant="outline" className="w-full mt-4">
-                Close
-              </Button>
+              <div className="flex gap-3 w-full mt-4">
+                <Button 
+                  onClick={handleRetry} 
+                  disabled={isRetrying}
+                  className="flex-1 gradient-primary text-white"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isRetrying ? 'animate-spin' : ''}`} />
+                  Retry
+                </Button>
+                <Button 
+                  onClick={() => onOpenChange(false)} 
+                  variant="outline" 
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
             )}
           </div>
         )}

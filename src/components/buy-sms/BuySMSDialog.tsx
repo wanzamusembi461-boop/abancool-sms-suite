@@ -46,16 +46,27 @@ export function BuySMSDialog({
 
       const normalizedPhone = normalizePhoneNumber(phone);
 
-      // Call edge function
-      const { data, error } = await supabase.functions.invoke("mpesa-stk-initiate", {
-        body: {
-          package_id,
-          phone: normalizedPhone,
-        },
-      });
+      // Set timeout for STK push initiation (30 seconds)
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
 
-      if (error) throw error;
-      return data;
+      try {
+        // Call edge function
+        const { data, error } = await supabase.functions.invoke("mpesa-stk-initiate", {
+          body: {
+            package_id,
+            phone: normalizedPhone,
+          },
+        });
+
+        clearTimeout(timeout);
+
+        if (error) throw error;
+        return data;
+      } catch (err) {
+        clearTimeout(timeout);
+        throw err;
+      }
     },
     onSuccess: (data) => {
       toast.success("STK Push initiated. Check your phone!");
@@ -63,7 +74,11 @@ export function BuySMSDialog({
       onOpenChange(false);
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to initiate payment");
+      if (error.message.includes("AbortError")) {
+        toast.error("Payment request timed out. Please try again.");
+      } else {
+        toast.error(error.message || "Failed to initiate payment");
+      }
     },
   });
 

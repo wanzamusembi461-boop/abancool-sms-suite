@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Users, DollarSign, Settings, FileText, AlertCircle, Activity, MessageSquare, Plus, Search, Edit, Trash2, CreditCard, Star } from "lucide-react";
+import { Users, DollarSign, Settings, FileText, AlertCircle, Activity, MessageSquare, Plus, Search, Edit, Trash2, CreditCard, Star, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -175,6 +175,42 @@ export default function Admin() {
     },
   });
 
+  // Fetch sender ID requests
+  const { data: senderIdRequests = [] } = useQuery({
+    queryKey: ["admin-sender-id-requests"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sender_ids")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Approve/reject sender ID mutation
+  const approveSenderIdMutation = useMutation({
+    mutationFn: async ({ senderIdId, approved, notes }: { senderIdId: string; approved: boolean; notes: string }) => {
+      const { error } = await supabase
+        .from("sender_ids")
+        .update({
+          status: approved ? "approved" : "rejected",
+          admin_notes: notes,
+        })
+        .eq("id", senderIdId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-sender-id-requests"] });
+      toast.success("Sender ID request updated");
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const [senderIdNotes, setSenderIdNotes] = useState("");
+  const [selectedSenderId, setSelectedSenderId] = useState<string | null>(null);
+  const [senderIdDialogOpen, setSenderIdDialogOpen] = useState(false);
+
   const stats = {
     totalUsers: users.length,
     totalTransactions: transactions.length,
@@ -186,6 +222,7 @@ export default function Admin() {
       })
       .reduce((sum, t) => sum + Number(t.amount_kes), 0),
     pendingTickets: tickets.filter((t) => t.priority === "high").length,
+    pendingSenderIds: senderIdRequests.filter((s: any) => s.status === "pending").length,
   };
 
   return (
@@ -195,12 +232,13 @@ export default function Admin() {
         <p className="text-sm text-muted-foreground mt-1">Complete platform management and oversight.</p>
       </div>
 
-      <TabsList className="grid w-full max-w-5xl grid-cols-8 glass-panel">
+      <TabsList className="grid w-full max-w-5xl grid-cols-9 glass-panel">
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="users">Users</TabsTrigger>
         <TabsTrigger value="payments">Payments</TabsTrigger>
         <TabsTrigger value="packages">Packages</TabsTrigger>
         <TabsTrigger value="marketplace">Marketplace</TabsTrigger>
+        <TabsTrigger value="sender-ids">Sender IDs</TabsTrigger>
         <TabsTrigger value="support">Support</TabsTrigger>
         <TabsTrigger value="gateway">Gateway</TabsTrigger>
         <TabsTrigger value="reports">Reports</TabsTrigger>
@@ -235,8 +273,8 @@ export default function Admin() {
           </Card>
           <Card className="glass-card p-5">
             <MessageSquare className="h-5 w-5 text-primary mb-2" />
-            <div className="text-xs font-semibold uppercase text-muted-foreground mb-1">Tickets</div>
-            <div className="font-display text-3xl font-bold text-red-600">{stats.pendingTickets}</div>
+            <div className="text-xs font-semibold uppercase text-muted-foreground mb-1">Pending Sender IDs</div>
+            <div className="font-display text-3xl font-bold text-orange-600">{stats.pendingSenderIds}</div>
           </Card>
         </div>
       </TabsContent>
@@ -608,6 +646,162 @@ export default function Admin() {
                     >
                       {item.is_active ? "Disable" : "Enable"}
                     </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      </TabsContent>
+
+      {/* Sender ID Requests */}
+      <TabsContent value="sender-ids" className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-4 mb-4">
+          <Card className="glass-card p-4">
+            <div className="text-xs font-semibold text-muted-foreground mb-1">Total Requests</div>
+            <div className="font-display text-2xl font-bold">{senderIdRequests.length}</div>
+          </Card>
+          <Card className="glass-card p-4">
+            <div className="text-xs font-semibold text-muted-foreground mb-1">Pending</div>
+            <div className="font-display text-2xl font-bold text-yellow-600">
+              {senderIdRequests.filter((s: any) => s.status === "pending").length}
+            </div>
+          </Card>
+          <Card className="glass-card p-4">
+            <div className="text-xs font-semibold text-muted-foreground mb-1">Approved</div>
+            <div className="font-display text-2xl font-bold text-green-600">
+              {senderIdRequests.filter((s: any) => s.status === "approved").length}
+            </div>
+          </Card>
+          <Card className="glass-card p-4">
+            <div className="text-xs font-semibold text-muted-foreground mb-1">Rejected</div>
+            <div className="font-display text-2xl font-bold text-red-600">
+              {senderIdRequests.filter((s: any) => s.status === "rejected").length}
+            </div>
+          </Card>
+        </div>
+
+        <Card className="glass-card overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Sender ID</TableHead>
+                <TableHead>Business</TableHead>
+                <TableHead>Network</TableHead>
+                <TableHead>Requested</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {senderIdRequests.map((request: any) => (
+                <TableRow key={request.id} className="hover:bg-white/50">
+                  <TableCell className="font-semibold text-sm uppercase">{request.sender_id}</TableCell>
+                  <TableCell className="text-sm">{request.business_name}</TableCell>
+                  <TableCell className="text-sm capitalize font-medium">{request.network}</TableCell>
+                  <TableCell className="text-sm">
+                    {new Date(request.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                      request.status === "approved" ? "bg-green-100 text-green-800" :
+                      request.status === "pending" ? "bg-yellow-100 text-yellow-800" :
+                      request.status === "rejected" ? "bg-red-100 text-red-800" :
+                      "bg-blue-100 text-blue-800"
+                    }`}>
+                      {request.status}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    {request.status === "pending" && (
+                      <Dialog open={senderIdDialogOpen && selectedSenderId === request.id} onOpenChange={(open) => {
+                        setSenderIdDialogOpen(open);
+                        if (open) setSelectedSenderId(request.id);
+                      }}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="outline" onClick={() => setSelectedSenderId(request.id)}>
+                            Review
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="glass-card-lg">
+                          <DialogHeader>
+                            <DialogTitle>Review Sender ID Request</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold uppercase">Sender ID</Label>
+                              <div className="px-3 py-2 bg-gray-100 rounded-lg font-mono font-bold text-lg">
+                                {request.sender_id}
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold uppercase">Business Name</Label>
+                              <div className="px-3 py-2 bg-gray-100 rounded-lg">{request.business_name}</div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold uppercase">Network</Label>
+                              <div className="px-3 py-2 bg-gray-100 rounded-lg capitalize">{request.network}</div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold uppercase">Purpose</Label>
+                              <div className="px-3 py-2 bg-gray-100 rounded-lg text-sm">{request.purpose}</div>
+                            </div>
+                            <div>
+                              <Label>Admin Notes/Reason</Label>
+                              <Textarea
+                                placeholder={request.status === "pending" ? "Approval notes..." : "Rejection reason..."}
+                                value={senderIdNotes}
+                                onChange={(e) => setSenderIdNotes(e.target.value)}
+                                className="mt-1 h-20"
+                              />
+                            </div>
+                            <div className="flex gap-3">
+                              <Button
+                                variant="outline"
+                                onClick={() => setSenderIdDialogOpen(false)}
+                                className="flex-1"
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  approveSenderIdMutation.mutate({
+                                    senderIdId: request.id,
+                                    approved: false,
+                                    notes: senderIdNotes,
+                                  });
+                                  setSenderIdDialogOpen(false);
+                                  setSenderIdNotes("");
+                                }}
+                                variant="outline"
+                                className="flex-1 text-red-600 hover:text-red-700"
+                              >
+                                Reject
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  approveSenderIdMutation.mutate({
+                                    senderIdId: request.id,
+                                    approved: true,
+                                    notes: senderIdNotes,
+                                  });
+                                  setSenderIdDialogOpen(false);
+                                  setSenderIdNotes("");
+                                }}
+                                className="flex-1 gradient-primary text-white"
+                              >
+                                Approve
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                    {request.status !== "pending" && (
+                      <span className="text-xs text-muted-foreground">
+                        {request.admin_notes ? "Reviewed" : "—"}
+                      </span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

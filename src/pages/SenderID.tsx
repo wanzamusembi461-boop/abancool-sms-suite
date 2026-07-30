@@ -155,6 +155,10 @@ export default function SenderID() {
       const session = await supabase.auth.getSession();
       if (!session.data.session?.access_token) throw new Error("Not authenticated");
 
+      // Set timeout for payment initiation
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mpesa-stk-initiate`,
         {
@@ -169,12 +173,15 @@ export default function SenderID() {
             type: "sender_id",
             sender_id_market_id: marketplace.network,
           }),
+          signal: controller.signal,
         }
       );
 
+      clearTimeout(timeout);
+
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to initiate payment");
+        throw new Error(error.error || `Payment initiation failed: ${response.status}`);
       }
 
       const data = await response.json();
@@ -182,8 +189,13 @@ export default function SenderID() {
       setTransactionId(data.transaction_id);
       setPaymentInitiated(true);
       setShowInvoice(false);
+      toast.success("STK push sent to your phone");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Payment failed");
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        toast.error("Payment request timed out. Please try again.");
+      } else {
+        toast.error(error instanceof Error ? error.message : "Payment failed");
+      }
     }
   };
 
