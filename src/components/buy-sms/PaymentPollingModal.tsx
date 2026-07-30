@@ -47,9 +47,10 @@ export function PaymentPollingModal({
         return { status: "pending", message: "Checking payment status..." };
       }
     },
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
+      const s = query.state.data?.status;
       // Stop polling if completed or failed
-      if (data?.status === "completed" || data?.status === "failed") {
+      if (s === "completed" || s === "failed") {
         return false;
       }
       // Stop polling after timeout

@@ -60,7 +60,7 @@ async function getDarajaToken(): Promise<string> {
   return data.access_token;
 }
 
-export default async function handler(req: Request) {
+async function handler(req: Request) {
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
@@ -261,3 +261,5 @@ export default async function handler(req: Request) {
   }
 }
 
+
+Deno.serve(handler);

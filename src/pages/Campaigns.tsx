@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Loader2, Send, Archive, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { readFunctionError } from "@/lib/fn-error";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -142,7 +143,7 @@ export default function Campaigns() {
           sender_id: quickSender || undefined,
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(await readFunctionError(error, "Send failed"));
       toast.success(`Sent ${data.sent}/${data.total}${data.failed ? ` (${data.failed} refunded)` : ""}`);
       queryClient.invalidateQueries({ queryKey: ["sms-balance"] });
       setQuickOpen(false);
@@ -209,7 +210,7 @@ export default function Campaigns() {
       const { data, error } = await supabase.functions.invoke("send-campaign", {
         body: { campaign_id: campaignId },
       });
-      if (error) throw error;
+      if (error) throw new Error(await readFunctionError(error, "Send failed"));
       toast.success(`Sent ${data.sent}/${data.total} (${data.failed} failed & refunded)`);
       queryClient.invalidateQueries({ queryKey: ["campaigns"] });
       queryClient.invalidateQueries({ queryKey: ["sms-balance"] });
