@@ -1,9 +1,24 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Sparkles, Send, Users, BarChart3, Shield, Zap, Globe, Check, Wallet, MessageSquare, Code2, Tag } from "lucide-react";
+import { ArrowRight, Sparkles, Send, Users, BarChart3, Shield, Zap, Globe, Check, Wallet, MessageSquare, Code2, Tag, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { PublicNav } from "@/components/PublicNav";
 import { BackgroundOrbs } from "@/components/BackgroundOrbs";
 
 export default function Landing() {
+  // Fetch active packages
+  const { data: packages = [] } = useQuery({
+    queryKey: ["landing-packages"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("packages")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
   return (
     <div className="relative min-h-screen overflow-hidden">
       <BackgroundOrbs />
@@ -181,51 +196,58 @@ export default function Landing() {
           <p className="mt-4 text-muted-foreground">Volume pricing. Pay with M-Pesa. No monthly fees.</p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {[
-            { n: "Starter", s: "1,000", p: "0.50", h: "For testing", g: false },
-            { n: "Popular", s: "5,000", p: "0.40", h: "Most popular", g: true },
-            { n: "Business", s: "10,000", p: "0.35", h: "For regular use", g: false },
-            { n: "Enterprise", s: "50,000+", p: "0.30", h: "High volume", g: false },
-          ].map((p) => (
-            <div key={p.n} className={`relative glass-card-lg p-7 hover-lift ${p.g ? "ring-2 ring-primary/40" : ""}`}>
-              {p.g && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full gradient-primary px-4 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-primary">
-                  {p.h}
-                </div>
-              )}
-              <div className="text-sm font-medium text-muted-foreground">{p.n}</div>
-              <div className="mt-3 flex items-baseline gap-1">
-                <span className="font-display text-5xl font-black">{p.s}</span>
-                <span className="text-sm text-muted-foreground ml-1">SMS</span>
-              </div>
-              <div className="mt-2 text-sm">
-                <span className="font-semibold gradient-text">KES {p.p}</span>
-                <span className="text-muted-foreground"> / SMS</span>
-              </div>
-              <div className="my-6 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-              <ul className="space-y-2.5 text-sm">
-                {["All countries in Africa", "Delivery reports", "API access", "24/7 support"].map((f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <div className="grid h-5 w-5 place-items-center rounded-full gradient-primary">
-                      <Check className="h-3 w-3 text-white" strokeWidth={3} />
+        {packages.length === 0 ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4">
+            {packages.map((pkg) => {
+              const featured = pkg.slug === "popular";
+              return (
+                <div key={pkg.id} className={`relative glass-card-lg p-7 hover-lift ${featured ? "ring-2 ring-primary/40" : ""}`}>
+                  {featured && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full gradient-primary px-4 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-primary">
+                      {pkg.name === "Popular" ? "Popular" : "Most popular"}
                     </div>
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                to="/register"
-                className={`mt-6 flex items-center justify-center gap-2 rounded-full py-3 text-sm font-semibold transition ${
-                  p.g ? "gradient-primary text-white shadow-primary hover:shadow-float" : "glass-panel hover:bg-white/70"
-                }`}
-              >
-                Get started
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-          ))}
-        </div>
+                  )}
+                  <div className="text-sm font-medium text-muted-foreground">{pkg.name}</div>
+                  <div className="mt-3 flex items-baseline gap-1">
+                    <span className="font-display text-5xl font-black">{pkg.sms_count.toLocaleString()}</span>
+                    <span className="text-sm text-muted-foreground ml-1">SMS</span>
+                  </div>
+                  <div className="mt-2 text-sm">
+                    <span className="font-semibold gradient-text">KES {Number(pkg.price_per_sms).toFixed(2)}</span>
+                    <span className="text-muted-foreground"> / SMS</span>
+                  </div>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Total: KES {Number(pkg.total_price).toLocaleString()}
+                  </div>
+                  <div className="my-6 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                  <ul className="space-y-2.5 text-sm">
+                    {["All countries in Africa", "Delivery reports", "API access", "24/7 support"].map((f) => (
+                      <li key={f} className="flex items-center gap-2">
+                        <div className="grid h-5 w-5 place-items-center rounded-full gradient-primary">
+                          <Check className="h-3 w-3 text-white" strokeWidth={3} />
+                        </div>
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    to="/register"
+                    className={`mt-6 flex items-center justify-center gap-2 rounded-full py-3 text-sm font-semibold transition ${
+                      featured ? "gradient-primary text-white shadow-primary hover:shadow-float" : "glass-panel hover:bg-white/70"
+                    }`}
+                  >
+                    Get started
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* DEV BAND */}

@@ -157,6 +157,33 @@ export default function Admin() {
     },
   });
 
+  // Add marketplace item mutation
+  const addMarketplaceMutation = useMutation({
+    mutationFn: async () => {
+      if (!marketplaceForm.name || !marketplaceForm.network) {
+        throw new Error("Provider name and network are required");
+      }
+      const { error } = await supabase
+        .from("sender_id_marketplace")
+        .insert({
+          name: marketplaceForm.name,
+          network: marketplaceForm.network,
+          price: marketplaceForm.price,
+          rating: marketplaceForm.rating,
+          sales_count: marketplaceForm.sales_count,
+          is_active: true,
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-marketplace"] });
+      setMarketplaceForm({ name: "", network: "", price: 0, rating: 4.9, sales_count: 0 });
+      setMarketplaceDialogOpen(false);
+      toast.success("Marketplace item added");
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   // Update marketplace
   const updateMarketplaceMutation = useMutation({
     mutationFn: async (item: any) => {
@@ -602,7 +629,13 @@ export default function Admin() {
                   <Button variant="outline" onClick={() => setMarketplaceDialogOpen(false)} className="flex-1">
                     Cancel
                   </Button>
-                  <Button className="flex-1 gradient-primary text-white">Add</Button>
+                  <Button 
+                    onClick={() => addMarketplaceMutation.mutate()}
+                    disabled={addMarketplaceMutation.isPending || !marketplaceForm.name || !marketplaceForm.network}
+                    className="flex-1 gradient-primary text-white"
+                  >
+                    {addMarketplaceMutation.isPending ? "Adding..." : "Add"}
+                  </Button>
                 </div>
               </div>
             </DialogContent>
