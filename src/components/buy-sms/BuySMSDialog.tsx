@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { readFunctionError } from "@/lib/fn-error";
 import { useAuth } from "@/contexts/AuthContext";
 import { validatePhoneNumber, normalizePhoneNumber } from "@/lib/mpesa";
 import { toast } from "sonner";
@@ -61,7 +62,7 @@ export function BuySMSDialog({
 
         clearTimeout(timeout);
 
-        if (error) throw error;
+        if (error) throw new Error(await readFunctionError(error, "Failed to initiate payment"));
         return data;
       } catch (err) {
         clearTimeout(timeout);
