@@ -625,7 +625,7 @@ export default function Admin() {
                 <TableRow key={item.id} className="hover:bg-white/50">
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell className="text-sm">{item.network}</TableCell>
-                  <TableCell>KES {Number(item.price).toLocaleString()}</TableCell>
+                  <TableCell>KES {Number(item.price_kes).toLocaleString()}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <span>{item.rating}</span>
