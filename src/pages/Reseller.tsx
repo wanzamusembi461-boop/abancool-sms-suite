@@ -39,7 +39,7 @@ export default function Reseller() {
   const [inviteEmail, setInviteEmail] = useState("");
 
   // Fetch reseller customers
-  const { data: customers = [] } = useQuery({
+  const { data: customers = [] } = useQuery<ResellerCustomer[]>({
     queryKey: ["reseller-customers", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {

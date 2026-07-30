@@ -235,11 +235,13 @@ export type Database = {
       }
       packages: {
         Row: {
+          allow_custom_amount: boolean | null
           created_at: string
           description: string | null
           id: string
           is_active: boolean
           name: string
+          notes: string | null
           price_per_sms: number
           slug: string
           sms_count: number
@@ -248,11 +250,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allow_custom_amount?: boolean | null
           created_at?: string
           description?: string | null
           id?: string
           is_active?: boolean
           name: string
+          notes?: string | null
           price_per_sms: number
           slug: string
           sms_count: number
@@ -261,11 +265,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allow_custom_amount?: boolean | null
           created_at?: string
           description?: string | null
           id?: string
           is_active?: boolean
           name?: string
+          notes?: string | null
           price_per_sms?: number
           slug?: string
           sms_count?: number
@@ -307,6 +313,48 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sender_id_marketplace: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          price_kes: number
+          rating: number | null
+          sales_count: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          price_kes: number
+          rating?: number | null
+          sales_count?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_kes?: number
+          rating?: number | null
+          sales_count?: number
+          sort_order?: number
           updated_at?: string
         }
         Relationships: []
@@ -455,8 +503,10 @@ export type Database = {
           package_id: string | null
           phone: string
           raw_callback: Json | null
+          sender_id_market_id: string | null
           sms_credited: number
           status: Database["public"]["Enums"]["transaction_status"]
+          type: string
           updated_at: string
           user_id: string
         }
@@ -469,8 +519,10 @@ export type Database = {
           package_id?: string | null
           phone: string
           raw_callback?: Json | null
+          sender_id_market_id?: string | null
           sms_credited?: number
           status?: Database["public"]["Enums"]["transaction_status"]
+          type?: string
           updated_at?: string
           user_id: string
         }
@@ -483,8 +535,10 @@ export type Database = {
           package_id?: string | null
           phone?: string
           raw_callback?: Json | null
+          sender_id_market_id?: string | null
           sms_credited?: number
           status?: Database["public"]["Enums"]["transaction_status"]
+          type?: string
           updated_at?: string
           user_id?: string
         }
@@ -545,6 +599,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      credit_sms: {
+        Args: { _amount: number; _user_id: string }
+        Returns: undefined
+      }
+      deduct_sms: {
+        Args: { _amount: number; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

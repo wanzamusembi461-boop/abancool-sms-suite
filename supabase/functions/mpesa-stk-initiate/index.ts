@@ -26,8 +26,8 @@ const bodySchema = z.object({
   phone: z
     .string()
     .regex(
-      /^(07\d{8}|2547\d{8})$/,
-      "Invalid phone format. Use 0712345678 or 2547XXXXXXXX (mobile only). Landlines not supported."
+      /^(0(7|1)\d{8}|254(7|1)\d{8})$/,
+      "Invalid phone format. Use 07/01XXXXXXXX or 2547/2541XXXXXXXX."
     ),
   amount: z.number().optional(),
   type: z.enum(["sms", "sender_id"]).optional().default("sms"),
@@ -37,6 +37,13 @@ const bodySchema = z.object({
 type RequestBody = z.infer<typeof bodySchema>;
 
 // ===== UTILITY FUNCTIONS =====
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
+  "Content-Type": "application/json",
+};
+
 function normalizePhone(phone: string): string {
   const trimmed = phone.trim();
   if (trimmed.startsWith("254")) return trimmed;
@@ -68,33 +75,34 @@ function generatePassword(
 
 async function getDarajaToken(): Promise<string> {
   const auth = btoa(`${mpesaConsumerKey}:${mpesaConsumerSecret}`);
-  const response = await fetch(`${DARAJA_BASE_URL}/oauth/v1/generate`, {
-    method: "GET",
-    headers: {
-      Authorization: `Basic ${auth}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to get Daraja token");
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const response = await fetch(
+      `${DARAJA_BASE_URL}/oauth/v1/generate?grant_type=client_credentials`,
+      {
+        method: "GET",
+        headers: { Authorization: `Basic ${auth}` },
+        signal: ctrl.signal,
+      }
+    );
+    if (!response.ok) {
+      const errText = await response.text().catch(() => "");
+      throw new Error(`Daraja auth ${response.status}: ${errText.slice(0, 200)}`);
+    }
+    const data = (await response.json()) as { access_token: string };
+    if (!data.access_token) throw new Error("Daraja returned no access_token");
+    return data.access_token;
+  } finally {
+    clearTimeout(timer);
   }
-
-  const data = (await response.json()) as { access_token: string };
-  return data.access_token;
 }
 
 // ===== MAIN HANDLER =====
 export default async function handler(req: Request) {
   // Allow CORS
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      },
-    });
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
@@ -110,7 +118,7 @@ export default async function handler(req: Request) {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: corsHeaders,
       });
     }
 
@@ -124,7 +132,7 @@ export default async function handler(req: Request) {
       if (!amount || !sender_id_market_id) {
         return new Response(
           JSON.stringify({ error: "Amount and sender_id_market_id required for sender_id purchase" }),
-          { status: 400, headers: { "Content-Type": "application/json" } }
+          { status: 400, headers: corsHeaders }
         );
       }
       finalAmount = Math.ceil(amount);
@@ -135,7 +143,7 @@ export default async function handler(req: Request) {
       if (!package_id) {
         return new Response(
           JSON.stringify({ error: "Package ID required for SMS purchase" }),
-          { status: 400, headers: { "Content-Type": "application/json" } }
+          { status: 400, headers: corsHeaders }
         );
       }
 
@@ -152,7 +160,7 @@ export default async function handler(req: Request) {
           JSON.stringify({ error: "Package not found or inactive" }),
           {
             status: 404,
-            headers: { "Content-Type": "application/json" },
+            headers: corsHeaders,
           }
         );
       }
@@ -210,7 +218,7 @@ export default async function handler(req: Request) {
         }),
         {
           status: 400,
-          headers: { "Content-Type": "application/json" },
+          headers: corsHeaders,
         }
       );
     }
@@ -225,7 +233,7 @@ export default async function handler(req: Request) {
     } catch {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: corsHeaders,
       });
     }
 
@@ -255,7 +263,7 @@ export default async function handler(req: Request) {
         }),
         {
           status: 500,
-          headers: { "Content-Type": "application/json" },
+          headers: corsHeaders,
         }
       );
     }
@@ -270,7 +278,7 @@ export default async function handler(req: Request) {
       }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: corsHeaders,
       }
     );
   } catch (error) {
@@ -284,7 +292,7 @@ export default async function handler(req: Request) {
         }),
         {
           status: 400,
-          headers: { "Content-Type": "application/json" },
+          headers: corsHeaders,
         }
       );
     }
@@ -295,7 +303,7 @@ export default async function handler(req: Request) {
       }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: corsHeaders,
       }
     );
   }
