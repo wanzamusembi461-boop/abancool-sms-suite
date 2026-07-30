@@ -325,6 +325,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          network: string | null
           price_kes: number
           rating: number | null
           sales_count: number
@@ -338,6 +339,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          network?: string | null
           price_kes: number
           rating?: number | null
           sales_count?: number
@@ -351,6 +353,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          network?: string | null
           price_kes?: number
           rating?: number | null
           sales_count?: number
@@ -368,6 +371,8 @@ export type Database = {
           description: string | null
           document_urls: string[] | null
           id: string
+          invoice_number: string | null
+          network: string | null
           purpose: string
           sender_id: string
           status: Database["public"]["Enums"]["sender_id_status"]
@@ -382,6 +387,8 @@ export type Database = {
           description?: string | null
           document_urls?: string[] | null
           id?: string
+          invoice_number?: string | null
+          network?: string | null
           purpose: string
           sender_id: string
           status?: Database["public"]["Enums"]["sender_id_status"]
@@ -396,6 +403,8 @@ export type Database = {
           description?: string | null
           document_urls?: string[] | null
           id?: string
+          invoice_number?: string | null
+          network?: string | null
           purpose?: string
           sender_id?: string
           status?: Database["public"]["Enums"]["sender_id_status"]

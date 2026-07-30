@@ -111,7 +111,7 @@ export default function SenderID() {
         senderIdText: customSenderID.toUpperCase(),
         businessName,
         userEmail: profile?.email || "",
-        userPhone: profile?.phone,
+        userPhone: profile?.phone ?? undefined,
       };
 
       const html = generateInvoiceHTML(invoiceData);
