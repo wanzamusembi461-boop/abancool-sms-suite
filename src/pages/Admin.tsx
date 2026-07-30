@@ -161,7 +161,7 @@ export default function Admin() {
       const { error } = await supabase
         .from("sender_id_marketplace")
         .update({ 
-          price: item.price,
+          price_kes: item.price_kes ?? item.price,
           rating: item.rating,
           sales_count: item.sales_count,
           is_active: !item.is_active
