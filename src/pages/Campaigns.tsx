@@ -54,9 +54,10 @@ export default function Campaigns() {
       if (error) throw error;
       return data ?? [];
     },
-    refetchInterval: (data) => {
+    refetchInterval: (data: any) => {
       // Poll every 2 seconds if any campaign is in processing state
-      const hasProcessing = data?.some((c: any) => c.status === "processing");
+      if (!data || !Array.isArray(data)) return false;
+      const hasProcessing = data.some((c: any) => c.status === "processing");
       return hasProcessing ? 2000 : false;
     },
   });
