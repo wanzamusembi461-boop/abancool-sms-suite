@@ -150,7 +150,9 @@ export default function Admin() {
       if (error) throw error;
     },
     onSuccess: () => {
+      // Invalidate all package-related queries across the app
       queryClient.invalidateQueries({ queryKey: ["admin-packages"] });
+      queryClient.invalidateQueries({ queryKey: ["packages"] });
       toast.success("Package updated");
     },
   });
