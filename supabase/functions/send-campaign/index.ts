@@ -57,7 +57,7 @@ async function sendOne(phone: string, message: string, senderId: string) {
 }
 
 
-export default async function handler(req: Request) {
+async function handler(req: Request) {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
@@ -183,3 +183,5 @@ export default async function handler(req: Request) {
     );
   }
 }
+
+Deno.serve(handler);

@@ -25,7 +25,7 @@ interface SafaricomWebhook {
   };
 }
 
-export default async function handler(req: Request) {
+async function handler(req: Request) {
   try {
     const payload = (await req.json()) as SafaricomWebhook;
     const callback = payload.Body.stkCallback;
@@ -160,3 +160,5 @@ export default async function handler(req: Request) {
   }
 }
 
+
+Deno.serve(handler);
