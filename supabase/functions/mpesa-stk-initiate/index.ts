@@ -99,7 +99,7 @@ async function getDarajaToken(): Promise<string> {
 }
 
 // ===== MAIN HANDLER =====
-export default async function handler(req: Request) {
+async function handler(req: Request) {
   // Allow CORS
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -309,3 +309,5 @@ export default async function handler(req: Request) {
   }
 }
 
+
+Deno.serve(handler);
