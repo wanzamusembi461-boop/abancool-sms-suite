@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Users, DollarSign, Settings, FileText, AlertCircle, Activity, MessageSquare, Plus, Search, Edit, Trash2, CreditCard } from "lucide-react";
+import { Users, DollarSign, Settings, FileText, AlertCircle, Activity, MessageSquare, Plus, Search, Edit, Trash2, CreditCard, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -93,6 +93,23 @@ export default function Admin() {
     },
   });
 
+  // Fetch marketplace
+  const { data: marketplace = [] } = useQuery({
+    queryKey: ["admin-marketplace"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sender_id_marketplace")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Marketplace state
+  const [marketplaceDialogOpen, setMarketplaceDialogOpen] = useState(false);
+  const [marketplaceForm, setMarketplaceForm] = useState({ name: "", network: "", price: 0, rating: 4.9, sales_count: 0 });
+
   // Add credit mutation
   const addCreditMutation = useMutation({
     mutationFn: async () => {
@@ -138,6 +155,26 @@ export default function Admin() {
     },
   });
 
+  // Update marketplace
+  const updateMarketplaceMutation = useMutation({
+    mutationFn: async (item: any) => {
+      const { error } = await supabase
+        .from("sender_id_marketplace")
+        .update({ 
+          price: item.price,
+          rating: item.rating,
+          sales_count: item.sales_count,
+          is_active: !item.is_active
+        })
+        .eq("id", item.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-marketplace"] });
+      toast.success("Marketplace updated");
+    },
+  });
+
   const stats = {
     totalUsers: users.length,
     totalTransactions: transactions.length,
@@ -158,11 +195,12 @@ export default function Admin() {
         <p className="text-sm text-muted-foreground mt-1">Complete platform management and oversight.</p>
       </div>
 
-      <TabsList className="grid w-full max-w-4xl grid-cols-7 glass-panel">
+      <TabsList className="grid w-full max-w-5xl grid-cols-8 glass-panel">
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="users">Users</TabsTrigger>
         <TabsTrigger value="payments">Payments</TabsTrigger>
         <TabsTrigger value="packages">Packages</TabsTrigger>
+        <TabsTrigger value="marketplace">Marketplace</TabsTrigger>
         <TabsTrigger value="support">Support</TabsTrigger>
         <TabsTrigger value="gateway">Gateway</TabsTrigger>
         <TabsTrigger value="reports">Reports</TabsTrigger>
@@ -451,6 +489,124 @@ export default function Admin() {
                       onClick={() => updatePackageMutation.mutate(pkg)}
                     >
                       {pkg.is_active ? "Deactivate" : "Activate"}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      </TabsContent>
+
+      {/* Marketplace */}
+      <TabsContent value="marketplace" className="space-y-4">
+        <div className="flex justify-end mb-4">
+          <Dialog open={marketplaceDialogOpen} onOpenChange={setMarketplaceDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gradient-primary text-white">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Marketplace Item
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="glass-card-lg">
+              <DialogHeader>
+                <DialogTitle>Add Marketplace Sender ID</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Provider Name</Label>
+                  <Input
+                    placeholder="E.g., Safaricom Official"
+                    value={marketplaceForm.name}
+                    onChange={(e) => setMarketplaceForm({ ...marketplaceForm, name: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Network (unique)</Label>
+                  <Input
+                    placeholder="E.g., safaricom"
+                    value={marketplaceForm.network}
+                    onChange={(e) => setMarketplaceForm({ ...marketplaceForm, network: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Price (KES)</Label>
+                  <Input
+                    type="number"
+                    placeholder="7500"
+                    value={marketplaceForm.price}
+                    onChange={(e) =>
+                      setMarketplaceForm({ ...marketplaceForm, price: parseFloat(e.target.value) || 0 })
+                    }
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Rating</Label>
+                  <Input
+                    type="number"
+                    placeholder="4.9"
+                    min="0"
+                    max="5"
+                    step="0.1"
+                    value={marketplaceForm.rating}
+                    onChange={(e) =>
+                      setMarketplaceForm({ ...marketplaceForm, rating: parseFloat(e.target.value) || 4.9 })
+                    }
+                    className="mt-1"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setMarketplaceDialogOpen(false)} className="flex-1">
+                    Cancel
+                  </Button>
+                  <Button className="flex-1 gradient-primary text-white">Add</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <Card className="glass-card overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Provider</TableHead>
+                <TableHead>Network</TableHead>
+                <TableHead>Price (KES)</TableHead>
+                <TableHead>Rating</TableHead>
+                <TableHead>Sales</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {marketplace.map((item) => (
+                <TableRow key={item.id} className="hover:bg-white/50">
+                  <TableCell className="font-medium">{item.name}</TableCell>
+                  <TableCell className="text-sm">{item.network}</TableCell>
+                  <TableCell>KES {Number(item.price).toLocaleString()}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <span>{item.rating}</span>
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                    </div>
+                  </TableCell>
+                  <TableCell>{item.sales_count}</TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded text-xs font-semibold ${item.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
+                      {item.is_active ? "Active" : "Inactive"}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => updateMarketplaceMutation.mutate(item)}
+                    >
+                      {item.is_active ? "Disable" : "Enable"}
                     </Button>
                   </TableCell>
                 </TableRow>
