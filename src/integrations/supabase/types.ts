@@ -608,6 +608,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_credit_sms: {
+        Args: { _amount: number; _reason?: string; _user_id: string }
+        Returns: undefined
+      }
       credit_sms: {
         Args: { _amount: number; _user_id: string }
         Returns: undefined
