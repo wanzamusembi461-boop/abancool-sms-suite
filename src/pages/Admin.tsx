@@ -256,11 +256,14 @@ export default function Admin() {
   const [selectedSenderId, setSelectedSenderId] = useState<string | null>(null);
   const [senderIdDialogOpen, setSenderIdDialogOpen] = useState(false);
 
+  const completedTx = transactions.filter((t) => t.status === "completed");
+
   const stats = {
     totalUsers: users.length,
     totalTransactions: transactions.length,
-    totalRevenue: transactions.reduce((sum, t) => sum + Number(t.amount_kes), 0),
-    todayRevenue: transactions
+    // Revenue counts COMPLETED payments only — pending/failed are excluded
+    totalRevenue: completedTx.reduce((sum, t) => sum + Number(t.amount_kes), 0),
+    todayRevenue: completedTx
       .filter((t) => {
         const today = new Date().toDateString();
         return new Date(t.created_at).toDateString() === today;
@@ -269,6 +272,7 @@ export default function Admin() {
     pendingTickets: tickets.filter((t) => t.priority === "high").length,
     pendingSenderIds: senderIdRequests.filter((s: any) => s.status === "pending").length,
   };
+
 
   return (
     <Tabs defaultValue="overview" className="space-y-6">
