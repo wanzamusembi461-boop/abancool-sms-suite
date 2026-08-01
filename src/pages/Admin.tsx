@@ -359,9 +359,16 @@ export default function Admin() {
                   <TableCell className="text-sm">
                     {new Date(user.created_at).toLocaleDateString()}
                   </TableCell>
+                  <TableCell className="text-sm font-semibold">
+                    {((user.balance?.paid_sms ?? 0) + (user.balance?.free_sms ?? 0)).toLocaleString()}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {(user.balance?.total_sent ?? 0).toLocaleString()}
+                  </TableCell>
                   <TableCell>
                     <select className="px-2 py-1 rounded text-sm border border-border bg-white">
-                      <option>{user.user_roles?.[0]?.role || "customer"}</option>
+                      <option>{user.role || "customer"}</option>
+
                       <option>Customer</option>
                       <option>Reseller</option>
                       <option>Developer</option>
