@@ -38,13 +38,13 @@ export default function Admin() {
   const [packagesDialogOpen, setPackagesDialogOpen] = useState(false);
   const [packageForm, setPackageForm] = useState({ name: "", sms_count: 0, total_price: 0 });
 
-  // Fetch users from profiles table (not auth)
+  // Fetch users from profiles table (roles + balances fetched separately — no FK embed)
   const { data: users = [] } = useQuery({
     queryKey: ["admin-users", searchUser],
     queryFn: async () => {
       let query = supabase
         .from("profiles")
-        .select("*, user_roles(role)")
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (searchUser) {
@@ -53,9 +53,23 @@ export default function Admin() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      const profiles = data ?? [];
+      if (!profiles.length) return [];
+
+      const ids = profiles.map((p) => p.id);
+      const [{ data: roles }, { data: balances }] = await Promise.all([
+        supabase.from("user_roles").select("user_id, role").in("user_id", ids),
+        supabase.from("sms_balances").select("*").in("user_id", ids),
+      ]);
+
+      return profiles.map((p) => ({
+        ...p,
+        role: roles?.find((r) => r.user_id === p.id)?.role ?? "customer",
+        balance: balances?.find((b) => b.user_id === p.id) ?? null,
+      }));
     },
   });
+
 
   // Fetch transactions
   const { data: transactions = [] } = useQuery({
