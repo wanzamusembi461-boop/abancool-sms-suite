@@ -461,6 +461,8 @@ export default function Admin() {
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead>Date</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Phone</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Receipt</TableHead>
@@ -470,11 +472,16 @@ export default function Admin() {
               {transactions.slice(0, 20).map((tx) => (
                 <TableRow key={tx.id} className="hover:bg-white/50">
                   <TableCell className="text-sm">
-                    {new Date(tx.created_at).toLocaleDateString()}
+                    {new Date(tx.created_at).toLocaleString()}
                   </TableCell>
+                  <TableCell className="text-xs font-semibold uppercase">
+                    {tx.type === "sender_id" ? "Sender ID" : "SMS"}
+                  </TableCell>
+                  <TableCell className="text-sm">{tx.phone}</TableCell>
                   <TableCell className="font-semibold">
                     KES {Number(tx.amount_kes).toLocaleString()}
                   </TableCell>
+
                   <TableCell>
                     <span
                       className={`px-2 py-1 rounded text-xs font-semibold ${
