@@ -129,21 +129,16 @@ export default function Admin() {
   const addCreditMutation = useMutation({
     mutationFn: async () => {
       if (!selectedUserId || !creditAmount) throw new Error("User and amount required");
-      
-      // Log to audit
-      await supabase.from("notifications").insert({
-        user_id: selectedUserId,
-        title: "Admin Credit",
-        body: `${creditAmount} SMS credited by admin. Reason: ${creditReason}`,
-        kind: "info",
-      });
 
-      // Credit SMS
-      await supabase.rpc("credit_sms", {
+      // Admin-guarded credit (also writes the audit notification server-side)
+      const { error } = await supabase.rpc("admin_credit_sms", {
         _user_id: selectedUserId,
         _amount: parseInt(creditAmount),
+        _reason: creditReason || null,
       });
+      if (error) throw error;
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       setCreditAmount("");
