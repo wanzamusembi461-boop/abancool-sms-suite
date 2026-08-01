@@ -249,7 +249,12 @@ async function handler(req: Request) {
         mpesa_checkout_id: stkData.CheckoutRequestID,
         status: "pending",
         type: type, // Track whether this is SMS or sender_id purchase
-        sender_id_market_id: sender_id_market_id || null,
+        // Column is a uuid — only persist when the client sent a real marketplace id
+        sender_id_market_id:
+          sender_id_market_id &&
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sender_id_market_id)
+            ? sender_id_market_id
+            : null,
       })
       .select()
       .single();

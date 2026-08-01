@@ -608,6 +608,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_credit_sms: {
+        Args: { _amount: number; _reason?: string; _user_id: string }
+        Returns: undefined
+      }
       credit_sms: {
         Args: { _amount: number; _user_id: string }
         Returns: undefined
@@ -623,6 +627,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      record_sms_usage: {
+        Args: {
+          _delivered: number
+          _failed: number
+          _sent: number
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      resolve_api_key: { Args: { _key_hash: string }; Returns: string }
     }
     Enums: {
       app_role: "customer" | "reseller" | "developer" | "admin"

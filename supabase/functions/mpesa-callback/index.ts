@@ -85,23 +85,51 @@ async function handler(req: Request) {
         console.error("Update error:", update_error);
       }
 
-      // Credit SMS balance (atomic via RPC)
-      const { error: credit_error } = await supabase.rpc("credit_sms", {
-        _user_id: transaction.user_id,
-        _amount: transaction.sms_credited,
-      });
+      if (transaction.type === "sender_id") {
+        // Sender ID purchase — activate the user's latest pending sender ID request
+        const { data: pending } = await supabase
+          .from("sender_ids")
+          .select("id, sender_id")
+          .eq("user_id", transaction.user_id)
+          .eq("status", "pending")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      if (credit_error) {
-        console.error("Credit SMS error:", credit_error);
+        if (pending) {
+          await supabase
+            .from("sender_ids")
+            .update({
+              status: "approved",
+              admin_notes: `Paid via M-Pesa (${receipt}). Awaiting network activation.`,
+            })
+            .eq("id", pending.id);
+        }
+
+        await supabase.from("notifications").insert({
+          user_id: transaction.user_id,
+          title: "Sender ID Payment Received",
+          body: `KES ${amount} received${pending ? ` for ${pending.sender_id}` : ""}. Your sender ID is being activated.`,
+          kind: "success",
+        });
+      } else {
+        // SMS purchase — credit balance (atomic via RPC)
+        const { error: credit_error } = await supabase.rpc("credit_sms", {
+          _user_id: transaction.user_id,
+          _amount: transaction.sms_credited,
+        });
+
+        if (credit_error) {
+          console.error("Credit SMS error:", credit_error);
+        }
+
+        await supabase.from("notifications").insert({
+          user_id: transaction.user_id,
+          title: "Payment Received",
+          body: `${transaction.sms_credited} SMS credited to your account.`,
+          kind: "success",
+        });
       }
-
-      // Create success notification
-      await supabase.from("notifications").insert({
-        user_id: transaction.user_id,
-        title: "Payment Received",
-        body: `${transaction.sms_credited} SMS credited to your account.`,
-        kind: "success",
-      });
 
       console.log("Payment completed:", {
         transaction_id: transaction.id,

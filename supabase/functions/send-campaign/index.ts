@@ -138,14 +138,24 @@ async function handler(req: Request) {
         phone,
         message,
         sender_id: senderId,
-        status: r.ok ? "sent" : "failed",
+        status: r.ok ? "delivered" : "failed",
         provider_response: r.data,
         error: r.ok ? null : (r.data?.message || r.data?.error || "Provider error"),
         sent_at: r.ok ? new Date().toISOString() : null,
+        delivered_at: r.ok ? new Date().toISOString() : null,
       });
     }
 
     if (logs.length) await admin.from("sms_logs").insert(logs);
+
+    // Record usage stats on the user's balance record (drives Messages Sent / Delivery Rate)
+    const { error: usageErr } = await admin.rpc("record_sms_usage", {
+      _user_id: userId,
+      _sent: sent,
+      _delivered: sent,
+      _failed: failed,
+    });
+    if (usageErr) console.error("record_sms_usage error", usageErr);
 
     // Refund failed
     if (failed > 0) {
@@ -158,6 +168,7 @@ async function handler(req: Request) {
         .update({
           status: failed === count ? "failed" : "sent",
           sent_count: sent,
+          delivered_count: sent,
           failed_count: failed,
           cost_sms: sent,
         })

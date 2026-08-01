@@ -38,13 +38,13 @@ export default function Admin() {
   const [packagesDialogOpen, setPackagesDialogOpen] = useState(false);
   const [packageForm, setPackageForm] = useState({ name: "", sms_count: 0, total_price: 0 });
 
-  // Fetch users from profiles table (not auth)
+  // Fetch users from profiles table (roles + balances fetched separately — no FK embed)
   const { data: users = [] } = useQuery({
     queryKey: ["admin-users", searchUser],
     queryFn: async () => {
       let query = supabase
         .from("profiles")
-        .select("*, user_roles(role)")
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (searchUser) {
@@ -53,9 +53,23 @@ export default function Admin() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      const profiles = data ?? [];
+      if (!profiles.length) return [];
+
+      const ids = profiles.map((p) => p.id);
+      const [{ data: roles }, { data: balances }] = await Promise.all([
+        supabase.from("user_roles").select("user_id, role").in("user_id", ids),
+        supabase.from("sms_balances").select("*").in("user_id", ids),
+      ]);
+
+      return profiles.map((p) => ({
+        ...p,
+        role: roles?.find((r) => r.user_id === p.id)?.role ?? "customer",
+        balance: balances?.find((b) => b.user_id === p.id) ?? null,
+      }));
     },
   });
+
 
   // Fetch transactions
   const { data: transactions = [] } = useQuery({
@@ -69,6 +83,7 @@ export default function Admin() {
       if (error) throw error;
       return data || [];
     },
+    refetchInterval: 15000,
   });
 
   // Fetch packages
@@ -114,21 +129,16 @@ export default function Admin() {
   const addCreditMutation = useMutation({
     mutationFn: async () => {
       if (!selectedUserId || !creditAmount) throw new Error("User and amount required");
-      
-      // Log to audit
-      await supabase.from("notifications").insert({
-        user_id: selectedUserId,
-        title: "Admin Credit",
-        body: `${creditAmount} SMS credited by admin. Reason: ${creditReason}`,
-        kind: "info",
-      });
 
-      // Credit SMS
-      await supabase.rpc("credit_sms", {
+      // Admin-guarded credit (also writes the audit notification server-side)
+      const { error } = await supabase.rpc("admin_credit_sms", {
         _user_id: selectedUserId,
         _amount: parseInt(creditAmount),
+        _reason: creditReason || undefined,
       });
+      if (error) throw error;
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       setCreditAmount("");
@@ -167,11 +177,13 @@ export default function Admin() {
         .from("sender_id_marketplace")
         .insert({
           name: marketplaceForm.name,
+          code: marketplaceForm.name.toUpperCase().replace(/[^A-Z0-9_]/g, "_").slice(0, 11),
           network: marketplaceForm.network,
-          price: marketplaceForm.price,
+          price_kes: marketplaceForm.price,
           rating: marketplaceForm.rating,
           sales_count: marketplaceForm.sales_count,
           is_active: true,
+
         });
       if (error) throw error;
     },
@@ -240,11 +252,14 @@ export default function Admin() {
   const [selectedSenderId, setSelectedSenderId] = useState<string | null>(null);
   const [senderIdDialogOpen, setSenderIdDialogOpen] = useState(false);
 
+  const completedTx = transactions.filter((t) => t.status === "completed");
+
   const stats = {
     totalUsers: users.length,
     totalTransactions: transactions.length,
-    totalRevenue: transactions.reduce((sum, t) => sum + Number(t.amount_kes), 0),
-    todayRevenue: transactions
+    // Revenue counts COMPLETED payments only — pending/failed are excluded
+    totalRevenue: completedTx.reduce((sum, t) => sum + Number(t.amount_kes), 0),
+    todayRevenue: completedTx
       .filter((t) => {
         const today = new Date().toDateString();
         return new Date(t.created_at).toDateString() === today;
@@ -253,6 +268,7 @@ export default function Admin() {
     pendingTickets: tickets.filter((t) => t.priority === "high").length,
     pendingSenderIds: senderIdRequests.filter((s: any) => s.status === "pending").length,
   };
+
 
   return (
     <Tabs defaultValue="overview" className="space-y-6">
@@ -325,8 +341,11 @@ export default function Admin() {
               <TableRow className="hover:bg-transparent">
                 <TableHead>Email</TableHead>
                 <TableHead>Created</TableHead>
+                <TableHead>SMS Balance</TableHead>
+                <TableHead>Sent</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Action</TableHead>
+
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -336,9 +355,16 @@ export default function Admin() {
                   <TableCell className="text-sm">
                     {new Date(user.created_at).toLocaleDateString()}
                   </TableCell>
+                  <TableCell className="text-sm font-semibold">
+                    {((user.balance?.paid_sms ?? 0) + (user.balance?.free_sms ?? 0)).toLocaleString()}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {(user.balance?.total_sent ?? 0).toLocaleString()}
+                  </TableCell>
                   <TableCell>
                     <select className="px-2 py-1 rounded text-sm border border-border bg-white">
-                      <option>{user.user_roles?.[0]?.role || "customer"}</option>
+                      <option>{user.role || "customer"}</option>
+
                       <option>Customer</option>
                       <option>Reseller</option>
                       <option>Developer</option>
@@ -431,6 +457,8 @@ export default function Admin() {
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead>Date</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Phone</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Receipt</TableHead>
@@ -440,11 +468,16 @@ export default function Admin() {
               {transactions.slice(0, 20).map((tx) => (
                 <TableRow key={tx.id} className="hover:bg-white/50">
                   <TableCell className="text-sm">
-                    {new Date(tx.created_at).toLocaleDateString()}
+                    {new Date(tx.created_at).toLocaleString()}
                   </TableCell>
+                  <TableCell className="text-xs font-semibold uppercase">
+                    {tx.type === "sender_id" ? "Sender ID" : "SMS"}
+                  </TableCell>
+                  <TableCell className="text-sm">{tx.phone}</TableCell>
                   <TableCell className="font-semibold">
                     KES {Number(tx.amount_kes).toLocaleString()}
                   </TableCell>
+
                   <TableCell>
                     <span
                       className={`px-2 py-1 rounded text-xs font-semibold ${
