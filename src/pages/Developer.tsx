@@ -18,7 +18,10 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
-import apiDocs from "@/content/api-docs.md?raw";
+import apiDocsRaw from "@/content/api-docs.md?raw";
+
+const API_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+const apiDocs = apiDocsRaw.replaceAll("{{API_BASE}}", API_BASE);
 
 interface ApiKey {
   id: string;

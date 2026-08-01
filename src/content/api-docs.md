@@ -15,8 +15,39 @@ Get your API key from your Developer dashboard. Keep it secret!
 ## Base URL
 
 ```
-https://api.abancool.tech/api/v1
+{{API_BASE}}
 ```
+
+### Send SMS (live endpoint)
+
+```bash
+curl -X POST {{API_BASE}}/sms-api \
+  -H "Authorization: Bearer sk_live_xxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": ["0712345678", "0110000000"],
+    "message": "Hello from my app",
+    "sender_id": "ABAN_COOL"
+  }'
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "sent": 2,
+  "failed": 0,
+  "total": 2,
+  "charged": 2,
+  "balance": 4998,
+  "results": [{ "to": "254712345678", "status": "delivered" }]
+}
+```
+
+Each accepted message is deducted from your account balance immediately, failed
+messages are refunded automatically, and `balance` returns your live remaining
+SMS credit so your system always stays in sync with your dashboard.
 
 ## Rate Limiting
 
