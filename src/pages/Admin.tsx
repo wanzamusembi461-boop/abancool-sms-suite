@@ -134,7 +134,7 @@ export default function Admin() {
       const { error } = await supabase.rpc("admin_credit_sms", {
         _user_id: selectedUserId,
         _amount: parseInt(creditAmount),
-        _reason: creditReason || null,
+        _reason: creditReason || undefined,
       });
       if (error) throw error;
     },
