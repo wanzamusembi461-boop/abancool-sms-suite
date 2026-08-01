@@ -623,6 +623,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      record_sms_usage: {
+        Args: {
+          _delivered: number
+          _failed: number
+          _sent: number
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      resolve_api_key: { Args: { _key_hash: string }; Returns: string }
     }
     Enums: {
       app_role: "customer" | "reseller" | "developer" | "admin"
