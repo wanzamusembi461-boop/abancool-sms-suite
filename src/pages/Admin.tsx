@@ -181,11 +181,13 @@ export default function Admin() {
         .from("sender_id_marketplace")
         .insert({
           name: marketplaceForm.name,
+          code: marketplaceForm.name.toUpperCase().replace(/[^A-Z0-9_]/g, "_").slice(0, 11),
           network: marketplaceForm.network,
-          price: marketplaceForm.price,
+          price_kes: marketplaceForm.price,
           rating: marketplaceForm.rating,
           sales_count: marketplaceForm.sales_count,
           is_active: true,
+
         });
       if (error) throw error;
     },
