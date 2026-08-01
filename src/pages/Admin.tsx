@@ -83,6 +83,7 @@ export default function Admin() {
       if (error) throw error;
       return data || [];
     },
+    refetchInterval: 15000,
   });
 
   // Fetch packages
