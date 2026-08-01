@@ -345,8 +345,11 @@ export default function Admin() {
               <TableRow className="hover:bg-transparent">
                 <TableHead>Email</TableHead>
                 <TableHead>Created</TableHead>
+                <TableHead>SMS Balance</TableHead>
+                <TableHead>Sent</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Action</TableHead>
+
               </TableRow>
             </TableHeader>
             <TableBody>
