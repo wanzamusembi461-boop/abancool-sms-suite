@@ -85,6 +85,18 @@ export default function Campaigns() {
     },
   });
 
+  // Preselect the account's own approved sender ID (fallback: first available)
+  const defaultSender = useMemo(() => {
+    const list = (senderIds as any[]).map((s) => s.sender_id);
+    return list.find((s) => s !== "ABAN_COOL") ?? list[0] ?? "";
+  }, [senderIds]);
+
+  useEffect(() => {
+    if (!defaultSender) return;
+    setQuickSender((prev) => prev || defaultSender);
+    setFormData((prev) => (prev.sender_id ? prev : { ...prev, sender_id: defaultSender }));
+  }, [defaultSender]);
+
   const { data: balance } = useQuery({
     queryKey: ["sms-balance", user?.id],
     enabled: !!user?.id,
