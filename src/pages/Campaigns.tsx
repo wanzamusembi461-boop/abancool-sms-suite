@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Loader2, Send, Archive, Zap } from "lucide-react";
 import { format } from "date-fns";
@@ -84,6 +84,18 @@ export default function Campaigns() {
       return data ?? [];
     },
   });
+
+  // Preselect the account's own approved sender ID (fallback: first available)
+  const defaultSender = useMemo(() => {
+    const list = (senderIds as any[]).map((s) => s.sender_id);
+    return list.find((s) => s !== "ABAN_COOL") ?? list[0] ?? "";
+  }, [senderIds]);
+
+  useEffect(() => {
+    if (!defaultSender) return;
+    setQuickSender((prev) => prev || defaultSender);
+    setFormData((prev) => (prev.sender_id ? prev : { ...prev, sender_id: defaultSender }));
+  }, [defaultSender]);
 
   const { data: balance } = useQuery({
     queryKey: ["sms-balance", user?.id],
@@ -185,7 +197,7 @@ export default function Campaigns() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["campaigns"] });
-      setFormData({ name: "", message: "", sender_id: "", audience: "all", group_id: "" });
+      setFormData({ name: "", message: "", sender_id: defaultSender, audience: "all", group_id: "" });
       setDialogOpen(false);
       toast.success("Campaign created — ready to send");
     },
