@@ -197,7 +197,7 @@ export default function Campaigns() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["campaigns"] });
-      setFormData({ name: "", message: "", sender_id: "", audience: "all", group_id: "" });
+      setFormData({ name: "", message: "", sender_id: defaultSender, audience: "all", group_id: "" });
       setDialogOpen(false);
       toast.success("Campaign created — ready to send");
     },
