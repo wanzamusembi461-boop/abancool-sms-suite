@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageSquare, Gift, Send, TrendingUp, ArrowUpRight, Wallet, Users, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +7,26 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel("dash-sms-balance")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sms_balances", filter: `user_id=eq.${user.id}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["sms-balance"] });
+          queryClient.invalidateQueries({ queryKey: ["wallet"] });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
+
 
   const { data: bal } = useQuery({
     queryKey: ["sms-balance", user?.id],
