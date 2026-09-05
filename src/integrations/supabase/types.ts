@@ -612,6 +612,10 @@ export type Database = {
         Args: { _amount: number; _reason?: string; _user_id: string }
         Returns: undefined
       }
+      admin_debit_sms: {
+        Args: { _amount: number; _reason?: string; _user_id: string }
+        Returns: undefined
+      }
       admin_list_users: {
         Args: never
         Returns: {
