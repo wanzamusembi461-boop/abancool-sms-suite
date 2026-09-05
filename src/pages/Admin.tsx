@@ -386,14 +386,17 @@ export default function Admin() {
                       <DialogTrigger asChild>
                         <Button size="sm" variant="outline" onClick={() => setSelectedUserId(user.id)}>
                           <CreditCard className="h-3 w-3 mr-1" />
-                          Credit
+                          Adjust SMS
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="glass-card-lg">
                         <DialogHeader>
-                          <DialogTitle>Add SMS Credit to {user.full_name || user.email}</DialogTitle>
+                          <DialogTitle>Adjust SMS for {user.full_name || user.email}</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4">
+                          <p className="text-sm text-muted-foreground">
+                            Current balance: {(user.balance?.paid_sms ?? 0) + (user.balance?.free_sms ?? 0)} SMS
+                          </p>
                           <div>
                             <Label>Amount (SMS)</Label>
                             <Input
@@ -407,22 +410,27 @@ export default function Admin() {
                           <div>
                             <Label>Reason</Label>
                             <Textarea
-                              placeholder="Admin credit reason..."
+                              placeholder="Reason for this adjustment..."
                               value={creditReason}
                               onChange={(e) => setCreditReason(e.target.value)}
                               className="mt-1 h-20"
                             />
                           </div>
                           <div className="flex gap-3">
-                            <Button variant="outline" onClick={() => setCreditDialogOpen(false)} className="flex-1">
-                              Cancel
+                            <Button
+                              variant="outline"
+                              onClick={() => adjustCreditMutation.mutate("remove")}
+                              disabled={adjustCreditMutation.isPending}
+                              className="flex-1"
+                            >
+                              Remove
                             </Button>
                             <Button
-                              onClick={() => addCreditMutation.mutate()}
-                              disabled={addCreditMutation.isPending}
+                              onClick={() => adjustCreditMutation.mutate("add")}
+                              disabled={adjustCreditMutation.isPending}
                               className="flex-1 gradient-primary text-white"
                             >
-                              {addCreditMutation.isPending ? "Processing..." : "Credit"}
+                              {adjustCreditMutation.isPending ? "Processing..." : "Add"}
                             </Button>
                           </div>
                         </div>
@@ -431,6 +439,7 @@ export default function Admin() {
                   </TableCell>
                 </TableRow>
               ))}
+
             </TableBody>
           </Table>
         </Card>
