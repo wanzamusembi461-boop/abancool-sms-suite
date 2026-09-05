@@ -116,7 +116,21 @@ async function handler(req: Request) {
       _amount: count,
     });
     if (dErr) throw dErr;
-    if (!hasEnough) return json({ error: "Insufficient SMS balance", required: count }, 402);
+    if (!hasEnough) {
+      const { data: cur } = await admin
+        .from("sms_balances")
+        .select("paid_sms, free_sms")
+        .eq("user_id", userId)
+        .maybeSingle();
+      const balance = (cur?.paid_sms ?? 0) + (cur?.free_sms ?? 0);
+      return json({
+        error: "Insufficient SMS balance. Please top up your account to continue sending.",
+        code: "insufficient_balance",
+        required: count,
+        balance,
+        top_up_url: "https://abancooltech.com/buy-sms",
+      }, 402);
+    }
 
     let sent = 0;
     let failed = 0;

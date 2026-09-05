@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Users, DollarSign, Settings, FileText, AlertCircle, Activity, MessageSquare, Plus, Search, Edit, Trash2, CreditCard, Star, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,37 +38,40 @@ export default function Admin() {
   const [packagesDialogOpen, setPackagesDialogOpen] = useState(false);
   const [packageForm, setPackageForm] = useState({ name: "", sms_count: 0, total_price: 0 });
 
-  // Fetch users from profiles table (roles + balances fetched separately — no FK embed)
-  const { data: users = [] } = useQuery({
-    queryKey: ["admin-users", searchUser],
+  // Fetch all users via admin-only RPC (single call, no RLS/embed pitfalls)
+  const { data: allUsers = [], error: usersError } = useQuery({
+    queryKey: ["admin-users"],
+    refetchInterval: 20000,
     queryFn: async () => {
-      let query = supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (searchUser) {
-        query = query.or(`email.ilike.%${searchUser}%,full_name.ilike.%${searchUser}%`);
-      }
-
-      const { data, error } = await query;
+      const { data, error } = await supabase.rpc("admin_list_users");
       if (error) throw error;
-      const profiles = data ?? [];
-      if (!profiles.length) return [];
-
-      const ids = profiles.map((p) => p.id);
-      const [{ data: roles }, { data: balances }] = await Promise.all([
-        supabase.from("user_roles").select("user_id, role").in("user_id", ids),
-        supabase.from("sms_balances").select("*").in("user_id", ids),
-      ]);
-
-      return profiles.map((p) => ({
-        ...p,
-        role: roles?.find((r) => r.user_id === p.id)?.role ?? "customer",
-        balance: balances?.find((b) => b.user_id === p.id) ?? null,
+      return (data ?? []).map((u) => ({
+        ...u,
+        balance: {
+          paid_sms: u.paid_sms,
+          free_sms: u.free_sms,
+          total_sent: u.total_sent,
+          total_delivered: u.total_delivered,
+        },
       }));
     },
   });
+
+  useEffect(() => {
+    if (usersError) toast.error((usersError as Error).message || "Could not load users");
+  }, [usersError]);
+
+  const users = (() => {
+    const q = searchUser.trim().toLowerCase();
+    if (!q) return allUsers;
+    return allUsers.filter(
+      (u) =>
+        (u.email ?? "").toLowerCase().includes(q) ||
+        (u.full_name ?? "").toLowerCase().includes(q) ||
+        (u.business_name ?? "").toLowerCase().includes(q)
+    );
+  })();
+
 
 
   // Fetch transactions
