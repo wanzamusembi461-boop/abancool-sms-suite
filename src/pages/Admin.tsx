@@ -128,30 +128,34 @@ export default function Admin() {
   const [marketplaceDialogOpen, setMarketplaceDialogOpen] = useState(false);
   const [marketplaceForm, setMarketplaceForm] = useState({ name: "", network: "", price: 0, rating: 4.9, sales_count: 0 });
 
-  // Add credit mutation
-  const addCreditMutation = useMutation({
-    mutationFn: async () => {
+  // Adjust credit mutation (add or remove)
+  const adjustCreditMutation = useMutation({
+    mutationFn: async (mode: "add" | "remove") => {
       if (!selectedUserId || !creditAmount) throw new Error("User and amount required");
+      const amount = parseInt(creditAmount);
+      if (!amount || amount <= 0) throw new Error("Enter a valid amount");
 
-      // Admin-guarded credit (also writes the audit notification server-side)
-      const { error } = await supabase.rpc("admin_credit_sms", {
+      // Admin-guarded adjustment (also writes the audit notification server-side)
+      const { error } = await supabase.rpc(mode === "add" ? "admin_credit_sms" : "admin_debit_sms", {
         _user_id: selectedUserId,
-        _amount: parseInt(creditAmount),
+        _amount: amount,
         _reason: creditReason || undefined,
       });
       if (error) throw error;
+      return mode;
     },
 
-    onSuccess: () => {
+    onSuccess: (mode) => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       setCreditAmount("");
       setCreditReason("");
       setSelectedUserId(null);
       setCreditDialogOpen(false);
-      toast.success("SMS credited");
+      toast.success(mode === "add" ? "SMS credited" : "SMS removed");
     },
     onError: (error: Error) => toast.error(error.message),
   });
+
 
   // Update package
   const updatePackageMutation = useMutation({
